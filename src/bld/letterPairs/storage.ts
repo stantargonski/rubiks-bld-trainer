@@ -26,7 +26,19 @@ export function migrate(store: PairStore): PairStore {
     };
 }
 
-export function exportJSON(text: string): PairStore {
-    return migrate(JSON.parse(text) as PairStore);
+export function exportJSON(store: PairStore): string {
+  return JSON.stringify(store, null, 2);
 }
 
+export function importJSON(text: string): PairStore {
+  const parsed = JSON.parse(text) as PairStore | null;
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('That file is not a pair library.');
+  }
+  if (parsed.schemaVersion !== 1) {
+    throw new Error(
+      `That file is schema version ${parsed.schemaVersion}; this app reads version 1.`,
+    );
+  }
+  return migrate(parsed);
+}

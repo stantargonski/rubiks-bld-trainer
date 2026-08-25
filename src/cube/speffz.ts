@@ -9,7 +9,6 @@ export const LETTERS = [
 ] as const;
 
 export type Letter = (typeof LETTERS)[number];
-
 export type PieceKind = 'corner' | 'edge';
 
 export interface Piece {
@@ -43,32 +42,31 @@ export const EDGES: Piece[] = [
   { name: 'DL', kind: 'edge', stickers: ['X', 'G'] },
 ];
 
-export const PIECES: Piece[] = [...CORNERS,...EDGES];
-
-const PIECE_BY_STICKER: Record<string, Piece> = {};
-for (const piece of PIECES) {
-    for (const sticker of piece.stickers) {
-        PIECE_BY_STICKER[sticker] = piece;
-    }
+function buildIndex(pieces: Piece[]): Record<Letter, Piece> {
+  const index = {} as Record<Letter, Piece>;
+  for (const piece of pieces) {
+    for (const sticker of piece.stickers) index[sticker] = piece;
+  }
+  return index;
 }
 
-export function pieceOf(letter: Letter): Piece {
-    return PIECE_BY_STICKER[letter];
+export const CORNER_OF = buildIndex(CORNERS);
+export const EDGE_OF = buildIndex(EDGES);
+
+export function pieceOf(letter: Letter, kind: PieceKind): Piece {
+  return kind === 'corner' ? CORNER_OF[letter] : EDGE_OF[letter];
 }
 
-export type PairKind = 'normal' | 'flip' | 'twist' | 'impossible'
-
-export function pairKind(first: Letter, second: Letter): PairKind {
-    if (first === second) return 'impossible';
-    const piece = pieceOf(first);
-    if (!piece.stickers.includes(second)) return 'normal';
-    return piece.kind === 'edge' ? 'flip' : 'twist';
+export function breakInSticker(piece: Piece): Letter {
+  return piece.stickers.reduce((best, sticker) =>
+    LETTERS.indexOf(sticker) < LETTERS.indexOf(best) ? sticker : best,
+  );
 }
 
-export function isSamePiecePair(first: Letter, second: Letter): boolean {
-    const kind = pairKind(first, second);
-    return kind === 'flip' || kind === 'twist';
+export function blindStickers(buffer: Letter, kind: PieceKind): Letter[] {
+  return pieceOf(buffer, kind).stickers;
 }
 
-export const EDGE_BUFFER = {piece: 'DF', sticker: 'U' as Letter, partner: 'K' as Letter};
-export const CORNER_BUFFER = {piece: 'ULB', sticker: 'A' as Letter};
+// export function faceOf(piece: Piece, letter: Letter): string {
+//   return piece.name[piece.stickers.indexOf(letter)];
+// }

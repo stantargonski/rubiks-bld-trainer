@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import PairGrid from './bld/letterPairs/PairGrid';
+import { loadStore } from './bld/letterPairs/storage';
+import { loadSettings, saveSettings, type Settings } from './settings/defaults';
 
 type Section = 'bld' | 'cfop' | 'timer'
 
@@ -11,6 +13,15 @@ const SECTIONS: { id: Section; label: string }[] = [
 
 export default function App() {
   const [section, setSection] = useState<Section>('bld');
+
+  const [store] = useState(loadStore);
+  const [settings, setSettings] = useState(loadSettings);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  function updateSettings(next: Settings) {
+    setSettings(next);
+    saveSettings(next);
+  }
 
   return (
     <div className="app">
@@ -30,7 +41,15 @@ export default function App() {
       </header>
 
       <main className="content">
-        {section === 'bld' && <PairGrid />}
+        {section === 'bld' && (
+          <PairGrid 
+            store={store}
+            settings={settings}
+            onSettings={updateSettings}
+            selected={selected}
+            onSelect={setSelected}
+          />
+        )}
         {section === 'cfop' && (
           <p className="stub">CFOP trainer — F2L, OLL and PLL databases. Phase 4.</p>
         )}
