@@ -6,28 +6,30 @@ export interface Settings {
     schemaVersion: 1;
     cornerBuffer: Letter;
     edgeBuffer: Letter;
-    scope: Scope;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
     schemaVersion: 1,
     cornerBuffer: 'E',
     edgeBuffer: 'U',
-    scope: 'shared',
 }
 
 export const SETTINGS_KEY = 'bld.settings.v1';
 
 export function loadSettings(): Settings {
-    try {
-        const raw = localStorage.getItem(SETTINGS_KEY);
-        if (!raw) return DEFAULT_SETTINGS;
-        const parsed = JSON.parse(raw) as Settings;
-        if (parsed.schemaVersion !== 1) return DEFAULT_SETTINGS;
-        return { ...DEFAULT_SETTINGS, ...parsed};
-    } catch {
-        return DEFAULT_SETTINGS;
-    }
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return DEFAULT_SETTINGS;
+    const parsed = JSON.parse(raw) as Partial<Settings> | null;
+    if (!parsed || parsed.schemaVersion !== 1) return DEFAULT_SETTINGS;
+    return {
+      schemaVersion: 1,
+      cornerBuffer: parsed.cornerBuffer ?? DEFAULT_SETTINGS.cornerBuffer,
+      edgeBuffer: parsed.edgeBuffer ?? DEFAULT_SETTINGS.edgeBuffer,
+    };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
 }
 
 export function saveSettings(settings: Settings): void {

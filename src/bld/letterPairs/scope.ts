@@ -14,13 +14,6 @@ export function blindSets(settings: Settings): { corner: Letter[]; edge: Letter[
   };
 }
 
-export function activeLetters(settings: Settings): Letter[] {
-  if (settings.scope === 'shared') return [...LETTERS];
-  const blind = blindSets(settings);
-  const dead = settings.scope === 'corners' ? blind.corner : blind.edge;
-  return LETTERS.filter((letter) => !dead.includes(letter));
-}
-
 function reachable(
   first: Letter, second: Letter, kind: PieceKind, blind: Letter[],
 ): boolean {
@@ -40,10 +33,8 @@ function reachable(
 
 export function pairFlag(first: Letter, second: Letter, settings: Settings): PairFlag {
   const blind = blindSets(settings);
-  const asCorner = settings.scope !== 'edges'
-    && reachable(first, second, 'corner', blind.corner);
-  const asEdge = settings.scope !== 'corners'
-    && reachable(first, second, 'edge', blind.edge);
+  const asCorner = reachable(first, second, 'corner', blind.corner);
+  const asEdge = reachable(first, second, 'edge', blind.edge);
 
   if (!asCorner && !asEdge) return 'dead';
   if (asCorner && pieceOf(first, 'corner') === pieceOf(second, 'corner')) return 'twist';
@@ -52,11 +43,10 @@ export function pairFlag(first: Letter, second: Letter, settings: Settings): Pai
 }
 
 export function livePairCount(settings: Settings): number {
-  const letters = activeLetters(settings);
   let count = 0;
-  for (const first of letters) {
-    for (const second of letters) {
-      if (pairFlag(first, second, settings) !== 'dead') count++;
+  for (const first of LETTERS) {
+    for (const second of LETTERS) {
+      if (pairFlag(first, second, settings) !== 'dead') count += 1;
     }
   }
   return count;

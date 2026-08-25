@@ -1,16 +1,11 @@
-import { useMemo, type CSSProperties } from 'react'
+import { useMemo } from 'react'
 import { LETTERS, pieceOf, type Letter, type PieceKind } from '../../cube/speffz'
-import type { Scope, Settings } from '../../settings/defaults'
+import type { Settings } from '../../settings/defaults'
 import { FIELDS, blankEntry, filledCount , type PairEntry, type PairStore } from './types'
-import { activeLetters, blindSets, pairFlag, type PairFlag } from './scope'
+import { blindSets, pairFlag, type PairFlag } from './scope'
 
 const ALL_PAIRS = LETTERS.length * LETTERS.length - LETTERS.length
 
-const SCOPES: { id: Scope, label: string}[] = [
-  { id: 'shared', label: ' Shared'},
-  { id: 'corners', label: 'Corners' },
-  { id: 'edges', label: 'Edges' },
-]
 const FLAG_LABEL: Record<PairFlag, string> = {
   dead: 'never traced with these buffers',
   normal: '',
@@ -27,7 +22,6 @@ interface PairGridProps {
 }
 
 export default function PairGrid({store, settings,onSettings, selected, onSelect,}: PairGridProps) {
-  const letters = useMemo(() => activeLetters(settings), [settings]);
   const blind = useMemo(() => blindSets(settings), [settings]);
 
   // One pass for both numbers. Dead pairs are excluded from the denominator
@@ -35,15 +29,15 @@ export default function PairGrid({store, settings,onSettings, selected, onSelect
   const totals = useMemo(() => {
     let live = 0;
     let done = 0;
-    for (const first of letters) {
-      for (const second of letters) {
+    for (const first of LETTERS) {
+      for (const second of LETTERS) {
         if (pairFlag(first, second, settings) === 'dead') continue;
         live += 1;
         done += filledCount(store.pairs[first + second]);
       }
     }
     return { live, done, fields: live * FIELDS.length };
-  }, [letters, settings, store]);
+  }, [settings, store]);
 
   const percent = totals.fields === 0
     ? 0
@@ -58,17 +52,16 @@ export default function PairGrid({store, settings,onSettings, selected, onSelect
       <div className="grid-panel">
         <h2 className="panel-title">Coverage — first letter down, second across</h2>
 
-        <div className="grid" style={{ '--cols': letters.length + 1 } as CSSProperties}>
+        <div className="grid">
           <div className="head" />
-          {letters.map((letter) => (
+          {LETTERS.map((letter) => (
             <div className="head" key={`col-${letter}`}>{letter}</div>
           ))}
 
-          {letters.map((first) => (
+          {LETTERS.map((first) => (
             <Row
               key={first}
               first={first}
-              letters={letters}
               settings={settings}
               pairs={store.pairs}
               selected={selected}
@@ -89,18 +82,6 @@ export default function PairGrid({store, settings,onSettings, selected, onSelect
 
       <aside className="side-panel">
         <h2 className="panel-title">Method</h2>
-
-        <div className="switch">
-          {SCOPES.map((item) => (
-            <button
-              key={item.id}
-              aria-current={settings.scope === item.id}
-              onClick={() => onSettings({ ...settings, scope: item.id })}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
 
         <BufferPicker
           label="Corner buffer"
@@ -163,17 +144,16 @@ function BufferPicker({ label, kind, value, onChange }: BufferPickerProps) {
 
 interface RowProps {
   first: Letter
-  letters: Letter[]
   settings: Settings
   pairs: Record<string, PairEntry>
   selected: string | null
   onSelect: (code: string) => void
 }
-function Row({ first, letters, settings, pairs, selected, onSelect }: RowProps) {
+function Row({ first, settings, pairs, selected, onSelect }: RowProps) {
   return (
     <>
       <div className="head">{first}</div>
-      {letters.map((second) => {
+      {LETTERS.map((second) => {
         const code = first + second;
         const flag = pairFlag(first, second, settings);
 

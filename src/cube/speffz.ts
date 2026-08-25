@@ -66,7 +66,3 @@ export function breakInSticker(piece: Piece): Letter {
 export function blindStickers(buffer: Letter, kind: PieceKind): Letter[] {
   return pieceOf(buffer, kind).stickers;
 }
-
-// export function faceOf(piece: Piece, letter: Letter): string {
-//   return piece.name[piece.stickers.indexOf(letter)];
-// }
