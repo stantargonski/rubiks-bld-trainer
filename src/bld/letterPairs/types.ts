@@ -49,3 +49,10 @@ export function filledCount(entry: PairEntry | undefined): number {
   }
   return n;
 }
+
+export function isBlankEntry(entry: PairEntry): boolean {
+  return filledCount(entry) === 0
+    && entry.notes.trim() === ''
+    && entry.tags.length === 0
+    && entry.confidence === 0;  
+}

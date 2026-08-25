@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react';
 import PairGrid from './bld/letterPairs/PairGrid';
-import { loadStore } from './bld/letterPairs/storage';
+import { loadStore, saveStore } from './bld/letterPairs/storage';
+import { isBlankEntry, type PairEntry } from './bld/letterPairs/types';
 import { loadSettings, saveSettings, type Settings } from './settings/defaults';
 
 type Section = 'bld' | 'cfop' | 'timer'
@@ -14,13 +15,27 @@ const SECTIONS: { id: Section; label: string }[] = [
 export default function App() {
   const [section, setSection] = useState<Section>('bld');
 
-  const [store] = useState(loadStore);
+  const [store, setStore] = useState(loadStore);
   const [settings, setSettings] = useState(loadSettings);
   const [selected, setSelected] = useState<string | null>(null);
 
   function updateSettings(next: Settings) {
     setSettings(next);
     saveSettings(next);
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => saveStore(store), 400)
+    return () => clearTimeout(timer)
+  }, [store])
+
+  function saveEntry(entry: PairEntry) {
+    setStore((prev) => {
+      const pairs = {...prev.pairs}
+      if (isBlankEntry(entry)) delete pairs[entry.code]
+      else pairs[entry.code] = {...entry, updatedAt: Date.now() }
+      return { ...prev, pairs }
+    })
   }
 
   return (
@@ -48,6 +63,7 @@ export default function App() {
             onSettings={updateSettings}
             selected={selected}
             onSelect={setSelected}
+            onChangeEntry={saveEntry}
           />
         )}
         {section === 'cfop' && (

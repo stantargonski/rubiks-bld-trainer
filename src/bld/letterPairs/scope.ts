@@ -1,9 +1,9 @@
-// scope.ts — replaces isLivePair + scopedPairKind
 import {
   LETTERS, blindStickers, breakInSticker, pieceOf,
   type Letter, type PieceKind,
 } from '../../cube/speffz';
 import type { Settings } from '../../settings/defaults';
+import { filledCount, type PairEntry } from './types';
 
 export type PairFlag = 'dead' | 'normal' | 'flip' | 'twist';
 
@@ -50,4 +50,23 @@ export function livePairCount(settings: Settings): number {
     }
   }
   return count;
+}
+
+export function nextEmptyCode(
+  fromCode: string | null,
+  pairs: Record<string, PairEntry>,
+  settings: Settings,
+): string | null {
+  const codes: string[] = []
+  for (const first of LETTERS) {
+    for (const second of LETTERS) {
+      if (pairFlag(first, second, settings) !== 'dead') codes.push(first + second)
+  }
+ }
+ const start = fromCode ? codes.indexOf(fromCode) + 1 : 0
+ for ( let step = 0; step < codes.length; step += 1) {
+  const code = codes[(start + step) % codes.length]
+  if (filledCount(pairs[code]) === 0) return code
+ }
+ return null
 }

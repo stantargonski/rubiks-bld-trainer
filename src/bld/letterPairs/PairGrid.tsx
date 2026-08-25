@@ -2,7 +2,8 @@ import { useMemo } from 'react'
 import { LETTERS, pieceOf, type Letter, type PieceKind } from '../../cube/speffz'
 import type { Settings } from '../../settings/defaults'
 import { FIELDS, blankEntry, filledCount , type PairEntry, type PairStore } from './types'
-import { blindSets, pairFlag, type PairFlag } from './scope'
+import { blindSets, pairFlag, nextEmptyCode, type PairFlag } from './scope'
+import PairEditor from './PairEditor'
 
 const ALL_PAIRS = LETTERS.length * LETTERS.length - LETTERS.length
 
@@ -19,9 +20,10 @@ interface PairGridProps {
   onSettings: (next: Settings) => void
   selected: string | null
   onSelect: (code: string) => void
+  onChangeEntry: (entry: PairEntry) => void
 }
 
-export default function PairGrid({store, settings,onSettings, selected, onSelect,}: PairGridProps) {
+export default function PairGrid({store, settings,onSettings, selected, onSelect, onChangeEntry,}: PairGridProps) {
   const blind = useMemo(() => blindSets(settings), [settings]);
 
   // One pass for both numbers. Dead pairs are excluded from the denominator
@@ -113,9 +115,20 @@ export default function PairGrid({store, settings,onSettings, selected, onSelect
           <span>of {ALL_PAIRS}</span>
         </div>
 
-        {entry
-          ? <Detail entry={entry} settings={settings} />
-          : <p className="stub" style={{ marginTop: 24 }}>Pick a cell to see its pair.</p>}
+        {entry ? (
+          <PairEditor
+            key={entry.code}
+            entry={entry}
+            flagLabel={FLAG_LABEL[pairFlag(entry.code[0] as Letter, entry.code[1] as Letter, settings)]}
+            onChange={onChangeEntry}
+            onNext={() => {
+              const next = nextEmptyCode(entry.code, store.pairs, settings);
+              if (next) onSelect(next);
+            }}
+          />
+        ) : (
+          <p className="stub" style={{ marginTop: 24 }}>Pick a cell to see its pair.</p>
+        )}
       </aside>
     </div>
   );
@@ -179,25 +192,5 @@ function Row({ first, settings, pairs, selected, onSelect }: RowProps) {
         );
       })}
     </>
-  );
-}
-
-function Detail({ entry, settings }: { entry: PairEntry; settings: Settings }) {
-  const flag = pairFlag(entry.code[0] as Letter, entry.code[1] as Letter, settings);
-  return (
-    <div style={{ marginTop: 24 }}>
-      <p className="code">{entry.code}</p>
-      {flag !== 'normal' && <p className="kind">{FLAG_LABEL[flag]}</p>}
-      <div className="rows">
-        {FIELDS.map((field) => (
-          <div className="row" key={field}>
-            <b>{field}</b>
-            <span className={entry[field] ? '' : 'empty'}>
-              {entry[field] || 'empty'}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
