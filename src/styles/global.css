@@ -20,9 +20,6 @@
 * {
     box-sizing: border-box;
 }
-/* Windows paints a wide, bright scrollbar that eats layout width and glares
-   against a dark UI. macOS overlays its own, so this is a no-op there.
-   Both properties inherit, so setting them here covers every scroller. */
 html {
   scrollbar-width: thin;
   scrollbar-color: var(--line) var(--bg);
