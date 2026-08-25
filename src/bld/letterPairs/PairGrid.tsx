@@ -6,6 +6,8 @@ import { blindSets, pairFlag, nextEmptyCode, type PairFlag } from './scope'
 import PairEditor from './PairEditor'
 
 const ALL_PAIRS = LETTERS.length * LETTERS.length - LETTERS.length
+const pct = (part: number, whole: number) =>
+  (whole === 0 ? 0 : Math.round((part / whole) * 100))
 
 const FLAG_LABEL: Record<PairFlag, string> = {
   dead: 'never traced with these buffers',
@@ -26,24 +28,25 @@ interface PairGridProps {
 export default function PairGrid({store, settings,onSettings, selected, onSelect, onChangeEntry,}: PairGridProps) {
   const blind = useMemo(() => blindSets(settings), [settings]);
 
-  // One pass for both numbers. Dead pairs are excluded from the denominator
-  // *and* the numerator — otherwise changing buffers can print over 100%.
+  // One pass, three numbers. Dead pairs are excluded from every denominator
+  // *and* numerator — otherwise changing buffers can print over 100%.
   const totals = useMemo(() => {
     let live = 0;
-    let done = 0;
+    let started = 0;   // pairs with at least one of person/action/object
+    let done = 0;      // individual fields filled
     for (const first of LETTERS) {
       for (const second of LETTERS) {
         if (pairFlag(first, second, settings) === 'dead') continue;
         live += 1;
-        done += filledCount(store.pairs[first + second]);
+        const level = filledCount(store.pairs[first + second]);
+        if (level > 0) started += 1;
+        done += level;
       }
     }
-    return { live, done, fields: live * FIELDS.length };
+    return { live, started, done, fields: live * FIELDS.length };
   }, [settings, store]);
 
-  const percent = totals.fields === 0
-    ? 0
-    : Math.round((totals.done / totals.fields) * 100);
+  const percent = pct(totals.started, totals.live);
 
   const entry: PairEntry | null = selected
     ? (store.pairs[selected] ?? blankEntry(selected))
@@ -100,6 +103,8 @@ export default function PairGrid({store, settings,onSettings, selected, onSelect
 
         <p className="blind">
           Dead letters — corners {blind.corner.join(' ')} · edges {blind.edge.join(' ')}
+          <br />
+          {totals.live} live pairs of {ALL_PAIRS}
         </p>
 
         <h2 className="panel-title" style={{ marginTop: 22 }}>Progress</h2>
@@ -107,13 +112,13 @@ export default function PairGrid({store, settings,onSettings, selected, onSelect
           <i style={{ width: `${percent}%` }} />
         </div>
         <div className="stat">
-          <span>{totals.done} / {totals.fields} fields</span>
+          <span>{totals.started} / {totals.live} pairs covered</span>
           <span>{percent}%</span>
         </div>
-        <div className="stat">
-          <span>{totals.live} live pairs</span>
-          <span>of {ALL_PAIRS}</span>
-        </div>
+        {/* <div className="stat">
+          <span>{totals.done} / {totals.fields} fields</span>
+          <span>{pct(totals.done, totals.fields)}%</span>
+        </div> */}
 
         {entry ? (
           <PairEditor
