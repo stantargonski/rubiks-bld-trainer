@@ -3,6 +3,7 @@ import type { Settings } from '../../settings/defaults';
 import { blankEntry, IMAGE_TIP, type PairEntry, type PairStore } from './types';
 import { buildFillQueue } from './scope';
 import { suggestFor } from './suggester';
+import Tip from './Tip'
 
 interface FillModeProps {
   store: PairStore;
@@ -68,9 +69,7 @@ export default function FillMode({
       <div className="fill-head">
         <span>
           image · {index + 1} of {queue.length}
-          <button type="button" className="tip" data-tip={IMAGE_TIP} aria-label={IMAGE_TIP}>
-            ?
-          </button>
+          <Tip text={IMAGE_TIP}/>
         </span>
         <button className="ghost" onClick={onExit}>Done (Esc)</button>
       </div>

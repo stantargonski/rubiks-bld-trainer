@@ -366,7 +366,9 @@ button {
 .fields { display: grid; gap: 10px; margin-top: 16px; }
 .field { display: block; }
 .field > span {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 5px;
   font-size: 11px;
   font-weight: 700;
@@ -520,7 +522,14 @@ button {
   outline-offset: 1px;
   border-color: transparent;
 }
-/* ---------- hover tip ---------- */
+/* ---------- tip ---------- */
+/* The wrapper is the positioning context, so the bubble anchors to the icon
+   even though it renders as a sibling rather than a pseudo-element. */
+.tip-wrap {
+  position: relative;
+  display: inline-flex;
+  margin-left: 6px;
+}
 .tip {
   display: inline-flex;
   align-items: center;
@@ -528,7 +537,6 @@ button {
   width: 14px;
   height: 14px;
   padding: 0;
-  margin-left: 6px;
   border-radius: 50%;
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -536,24 +544,20 @@ button {
   font-size: 9px;
   font-weight: 800;
   line-height: 1;
-  cursor: help;
-  position: relative;
-  vertical-align: middle;
+  cursor: pointer;
 }
-.tip:hover,
-.tip:focus-visible {
+.tip:hover { color: var(--text); border-color: var(--text-dim); }
+.tip[aria-expanded='true'] {
   background: var(--accent);
   border-color: transparent;
   color: var(--accent-ink);
-  outline: none;
 }
-.tip::after {
-  content: attr(data-tip);
+.tip-bubble {
   position: absolute;
-  top: 150%;
-  left: -8px;
+  bottom: calc(100% + 6px);
+  right: 0;
   z-index: 5;
-  width: 230px;
+  width: 190px;
   padding: 9px 11px;
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -565,16 +569,7 @@ button {
   letter-spacing: 0;
   text-transform: none;
   text-align: left;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 90ms ease;
 }
-.tip:hover::after,
-.tip:focus-visible::after {
-  opacity: 1;
-  visibility: visible;
-}
-
 /* ---------- global notes ---------- */
 .notes-page {
   max-width: 760px;

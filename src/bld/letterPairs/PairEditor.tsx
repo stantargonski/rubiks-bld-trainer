@@ -2,6 +2,7 @@ import { useEffect, useRef, type KeyboardEvent } from 'react';
 import {
   CONFIDENCE_LABELS, IMAGE_TIP, type Confidence, type PairEntry,
 } from './types';
+import Tip from './Tip';
 
 const LEVELS: Confidence[] = [0, 1, 2, 3];
 
@@ -39,9 +40,7 @@ export default function PairEditor({
         <label className="field">
           <span>
             image
-            <button type="button" className="tip" data-tip={IMAGE_TIP} aria-label={IMAGE_TIP}>
-              ?
-            </button>
+            <Tip text={IMAGE_TIP} />
           </span>
           <input
             ref={imageInput}
