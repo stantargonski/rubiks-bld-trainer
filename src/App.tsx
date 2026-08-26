@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import PairGrid from './bld/letterPairs/PairGrid';
-import { loadStore, saveStore } from './bld/letterPairs/storage';
-import { isBlankEntry, type PairEntry } from './bld/letterPairs/types';
+import FillMode from './bld/letterPairs/FillMode';
+import {
+  loadStore, loadSuggestions, saveStore, saveSuggestions,
+} from './bld/letterPairs/storage';
+import { isBlankEntry, type Field, type PairEntry } from './bld/letterPairs/types';
 import { loadSettings, saveSettings, type Settings } from './settings/defaults';
 
 type Section = 'bld' | 'cfop' | 'timer'
@@ -18,10 +21,17 @@ export default function App() {
   const [store, setStore] = useState(loadStore);
   const [settings, setSettings] = useState(loadSettings);
   const [selected, setSelected] = useState<string | null>(null);
+  const [fillField, setFillField] = useState<Field | null>(null);
+  const [suggestions, setSuggestions] = useState(loadSuggestions);
 
   function updateSettings(next: Settings) {
     setSettings(next);
     saveSettings(next);
+  }
+
+  function updateSuggestions(words: Record<string, string[]>) {
+    setSuggestions(words);
+    saveSuggestions(words);
   }
 
   useEffect(() => {
@@ -56,16 +66,29 @@ export default function App() {
       </header>
 
       <main className="content">
-        {section === 'bld' && (
-          <PairGrid 
+        {section === 'bld' && (fillField ? (
+          <FillMode
+            key={fillField}
+            store={store}
+            settings={settings}
+            field={fillField}
+            words={suggestions}
+            onChangeEntry={saveEntry}
+            onExit={() => setFillField(null)}
+          />
+        ) : (
+          <PairGrid
             store={store}
             settings={settings}
             onSettings={updateSettings}
             selected={selected}
             onSelect={setSelected}
+            suggestions={suggestions}
+            onSuggestions={updateSuggestions}
             onChangeEntry={saveEntry}
+            onFill={setFillField}
           />
-        )}
+        ))}
         {section === 'cfop' && (
           <p className="stub">CFOP trainer — F2L, OLL and PLL databases. Phase 4.</p>
         )}

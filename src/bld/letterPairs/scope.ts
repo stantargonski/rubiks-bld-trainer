@@ -3,7 +3,7 @@ import {
   type Letter, type PieceKind,
 } from '../../cube/speffz';
 import type { Settings } from '../../settings/defaults';
-import { filledCount, type PairEntry } from './types';
+import { filledCount, type Field, type PairEntry } from './types';
 
 export type PairFlag = 'dead' | 'normal' | 'flip' | 'twist';
 
@@ -69,4 +69,28 @@ export function nextEmptyCode(
   if (filledCount(pairs[code]) === 0) return code
  }
  return null
+}
+/** Pairs still missing this field. Flip/twist pairs first — they are guaranteed. */
+export function buildFillQueue(
+  pairs: Record<string, PairEntry>,
+  settings: Settings,
+  field: Field,
+): string[] {
+  const flagged: string[] = [];
+  const rest: string[] = [];
+
+  for (const first of LETTERS) {
+    for (const second of LETTERS) {
+      const flag = pairFlag(first, second, settings);
+      if (flag === 'dead') continue;
+
+      const code = first + second;
+      if ((pairs[code]?.[field] ?? '').trim() !== '') continue;
+
+      if (flag === 'normal') rest.push(code);
+      else flagged.push(code);
+    }
+  }
+
+  return [...flagged, ...rest];
 }

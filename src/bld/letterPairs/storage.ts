@@ -42,3 +42,19 @@ export function importJSON(text: string): PairStore {
   }
   return migrate(parsed);
 }
+export const SUGGESTIONS_KEY = 'bld.suggestions.v1';
+
+export function loadSuggestions(): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(SUGGESTIONS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, string[]> | null;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveSuggestions(words: Record<string, string[]>): void {
+  localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(words));
+}

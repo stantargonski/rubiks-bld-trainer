@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import { LETTERS, pieceOf, type Letter, type PieceKind } from '../../cube/speffz'
 import type { Settings } from '../../settings/defaults'
-import { FIELDS, blankEntry, filledCount , type PairEntry, type PairStore } from './types'
+import { FIELDS, blankEntry, filledCount , type PairEntry, type PairStore, type Field } from './types'
 import { blindSets, pairFlag, nextEmptyCode, type PairFlag } from './scope'
 import PairEditor from './PairEditor'
+import SuggestionLoader from './SuggestionLoader'
 
 const ALL_PAIRS = LETTERS.length * LETTERS.length - LETTERS.length
 const pct = (part: number, whole: number) =>
@@ -22,10 +23,16 @@ interface PairGridProps {
   onSettings: (next: Settings) => void
   selected: string | null
   onSelect: (code: string) => void
+  suggestions: Record<string, string[]>
+  onSuggestions: (words: Record<string, string[]>) => void
   onChangeEntry: (entry: PairEntry) => void
+  onFill: (field: Field) => void
 }
 
-export default function PairGrid({store, settings,onSettings, selected, onSelect, onChangeEntry,}: PairGridProps) {
+export default function PairGrid({
+  store, settings, onSettings, selected, onSelect,
+  suggestions, onSuggestions, onChangeEntry, onFill,
+}: PairGridProps) {
   const blind = useMemo(() => blindSets(settings), [settings]);
 
   // One pass, three numbers. Dead pairs are excluded from every denominator
@@ -119,6 +126,13 @@ export default function PairGrid({store, settings,onSettings, selected, onSelect
           <span>{totals.done} / {totals.fields} fields</span>
           <span>{pct(totals.done, totals.fields)}%</span>
         </div> */}
+        <div className="actions">
+          {FIELDS.map((field) => (
+            <button key={field} onClick={() => onFill(field)}>Fill {field}</button>
+          ))}
+        </div>
+
+        <SuggestionLoader words={suggestions} onLoad={onSuggestions} />
 
         {entry ? (
           <PairEditor
