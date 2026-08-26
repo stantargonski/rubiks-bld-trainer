@@ -1,19 +1,20 @@
 :root {
- --bg: #0e0f11;
-  --panel: #17191c;
-  --panel-2: #1e2126;
-  --line: #2a2e34;
-  --text: #f2f4f6;
-  --text-dim: #9aa2ac;
-  --accent: #4f7cff;
+  color-scheme: dark;
+  --bg: #101318;
+  --panel: #191d24;
+  --panel-2: #212630;
+  --line: #2c323d;
+  --text: #dbe1ea;
+  --text-dim: #9aa4b2;
+  --accent: #3987e5;
   --accent-ink: #ffffff;
-  /* coverage ramp: 0/3 -> 3/3 fields filled */
-  --fill-0: #1b1e22;
-  --fill-1: #2d3a55;
-  --fill-2: #3d5a9a;
-  --fill-3: #4f7cff;
-  --flag: #f0a63a; /* flip / twist pairs */
-  --dead: #121316; /* impossible cells */
+  /* confidence ramp: no image → weak → ok → solid */
+  --fill-0: #2e3540;
+  --fill-1: #1c5cab;
+  --fill-2: #2a78d6;
+  --fill-3: #5598e7;
+  --flag: #ffc233;
+  --dead: #13161b;
   --radius: 12px;
   --radius-sm: 10px;
 }
@@ -102,15 +103,43 @@ button {
   flex-wrap: wrap;
 }
 .grid-panel,
-.side-panel {
+.panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 16px;
 }
-.side-panel {
-  width: 280px;
-  flex: none;
+/* The grid is a fixed 25 × 26px, so it never flexes. The two side panels share
+   whatever is left and wrap under it when there isn't enough room. */
+.grid-panel {
+  flex: 0 0 auto;
+}
+.method-panel {
+  flex: 1 1 280px;
+  min-width: 260px;
+  max-width: 340px;
+}
+.editor-panel {
+  flex: 1 1 320px;
+  min-width: 280px;
+  max-width: 400px;
+}
+@media (max-width: 900px) {
+  .pairs-layout {
+    flex-direction: column;
+  }
+  .method-panel,
+  .editor-panel {
+    max-width: none;
+    width: 100%;
+  }
+}
+/* FillMode reserves space so the layout doesn't jump; in the editor panel the
+   chips should just take the room they need and scroll past a few rows. */
+.editor-panel .fill-suggestions {
+  min-height: 0;
+  max-height: 170px;
+  overflow-y: auto;
 }
 .panel-title {
   font-weight: 800;
@@ -477,5 +506,85 @@ button {
 .loader textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+  border-color: transparent;
+}
+/* ---------- hover tip ---------- */
+.tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+  position: relative;
+  vertical-align: middle;
+}
+.tip:hover,
+.tip:focus-visible {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
+  outline: none;
+}
+.tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: 150%;
+  left: -8px;
+  z-index: 5;
+  width: 230px;
+  padding: 9px 11px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 90ms ease;
+}
+.tip:hover::after,
+.tip:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ---------- global notes ---------- */
+.notes-page {
+  max-width: 760px;
+}
+.notes-area {
+  width: 100%;
+  height: 60vh;
+  min-height: 260px;
+  margin-top: 10px;
+  padding: 14px 15px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.notes-area::placeholder { color: var(--text-dim); opacity: 0.45; }
+.notes-area:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
   border-color: transparent;
 }

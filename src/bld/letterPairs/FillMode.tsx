@@ -1,25 +1,33 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { Settings } from '../../settings/defaults';
-import { blankEntry, type Field, type PairEntry, type PairStore } from './types';
+import { blankEntry, IMAGE_TIP, type PairEntry, type PairStore } from './types';
 import { buildFillQueue } from './scope';
 import { suggestFor } from './suggester';
 
 interface FillModeProps {
   store: PairStore;
   settings: Settings;
-  field: Field;
   words: Record<string, string[]>;
   onChangeEntry: (entry: PairEntry) => void;
   onExit: () => void;
 }
 
 export default function FillMode({
-  store, settings, field, words, onChangeEntry, onExit,
+  store, settings, words, onChangeEntry, onExit,
 }: FillModeProps) {
   // Frozen at mount. If this rebuilt as you typed, the pair under your cursor
   // would drop out of the list and the next one would jump into its place.
-  const [queue] = useState(() => buildFillQueue(store.pairs, settings, field));
+  const [queue] = useState(() => buildFillQueue(store.pairs, settings));
   const [index, setIndex] = useState(0);
+  const input = useRef<HTMLInputElement>(null);
+
+  const code = queue[index];
+
+  // Hooks have to run in the same order every render, so this sits above the
+  // early return below rather than next to the markup it affects.
+  useEffect(() => {
+    input.current?.focus();
+  }, [code]);
 
   function go(delta: number) {
     setIndex((prev) => Math.min(Math.max(prev + delta, 0), queue.length - 1));
@@ -29,18 +37,17 @@ export default function FillMode({
     return (
       <div className="fill">
         <p className="fill-code">done</p>
-        <p className="hint">Nothing left to fill for {field}.</p>
+        <p className="hint">Every live pair has an image.</p>
         <button className="ghost" onClick={onExit}>Back to grid</button>
       </div>
     );
   }
 
-  const code = queue[index];
   const entry = store.pairs[code] ?? blankEntry(code);
   const suggestions = suggestFor(code, words);
 
   function accept(value: string) {
-    onChangeEntry({ ...entry, [field]: value });
+    onChangeEntry({ ...entry, image: value });
     go(1);
   }
 
@@ -59,28 +66,37 @@ export default function FillMode({
   return (
     <div className="fill">
       <div className="fill-head">
-        <span>{field} · {index + 1} of {queue.length}</span>
+        <span>
+          image · {index + 1} of {queue.length}
+          <button type="button" className="tip" data-tip={IMAGE_TIP} aria-label={IMAGE_TIP}>
+            ?
+          </button>
+        </span>
         <button className="ghost" onClick={onExit}>Done (Esc)</button>
       </div>
 
       <p className="fill-code">{code}</p>
 
       <input
-        key={code}
-        autoFocus
+        ref={input}
         className="fill-input"
-        value={entry[field]}
-        placeholder={`${field} for ${code}`}
-        onChange={(event) => onChangeEntry({ ...entry, [field]: event.target.value })}
+        value={entry.image}
+        placeholder={`what you picture for ${code}`}
+        onChange={(event) => onChangeEntry({ ...entry, image: event.target.value })}
         onKeyDown={handleKeyDown}
       />
 
       <div className="fill-suggestions">
         {suggestions.length === 0 ? (
-          <p className="hint">No starter list for {field} yet — type your own.</p>
+          <p className="hint">No suggestions for {code} — paste a list on the grid screen.</p>
         ) : (
           suggestions.map((suggestion) => (
-            <button key={suggestion} className="suggestion" onClick={() => accept(suggestion)}>
+            <button
+              key={suggestion}
+              type="button"
+              className="suggestion"
+              onClick={() => accept(suggestion)}
+            >
               {suggestion}
             </button>
           ))

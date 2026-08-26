@@ -3,36 +3,47 @@ import { parseSuggestionList } from './suggester';
 
 interface SuggestionLoaderProps {
   words: Record<string, string[]>;
+  liveCodes: string[];
   onLoad: (words: Record<string, string[]>) => void;
 }
 
-export default function SuggestionLoader({ words, onLoad }: SuggestionLoaderProps) {
+export default function SuggestionLoader({ words, liveCodes, onLoad }: SuggestionLoaderProps) {
   const [text, setText] = useState('');
   const [message, setMessage] = useState('');
 
-  const loaded = Object.keys(words).length;
+  const missing = liveCodes.filter((code) => !words[code]);
+  const covered = liveCodes.length - missing.length;
 
   function handleLoad() {
     const parsed = parseSuggestionList(text);
-    const count = Object.keys(parsed).length;
+    const added = Object.keys(parsed).length;
 
-    if (count === 0) {
-      setMessage('No lines matched. Expected "AB - word, word".');
+    if (added === 0) {
+      setMessage('No pairs found. Each code needs to be on its own line.');
       return;
     }
 
-    onLoad({ ...words, ...parsed });   // merge, so you can paste several sources
+    const next = { ...words, ...parsed };
+    const gaps = liveCodes.filter((code) => !next[code]);
+
+    onLoad(next);
     setText('');
-    setMessage(`Loaded ${count} pairs.`);
+    setMessage(
+      gaps.length === 0
+        ? `Loaded ${added} pairs. Every live pair is covered.`
+        : `Loaded ${added} pairs. Missing ${gaps.length}: ${gaps.slice(0, 15).join(' ')}${
+            gaps.length > 15 ? ' …' : ''
+          }`,
+    );
   }
 
   return (
     <details className="loader">
-      <summary>Suggestions — {loaded} pairs loaded</summary>
+      <summary>Suggestions — {covered} of {liveCodes.length} live pairs</summary>
 
       <textarea
         value={text}
-        placeholder={'AB - Abacus, Ali Baba\nAC - Air Conditioner'}
+        placeholder={'AB\nAbacus\nAli Baba'}
         onChange={(event) => setText(event.target.value)}
       />
 

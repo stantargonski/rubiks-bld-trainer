@@ -5,26 +5,57 @@ function isSpeffzCode(code: string): boolean {
 }
 
 /**
- * Parses pasted lines of the form "AB - Abacus, Ali Baba, ABBA".
- * Tolerates bullets, colons and en/em dashes; ignores anything else.
+ * Parses a pasted word list into `{ "AB": ["Abacus", "Ali Baba"] }`.
+ *
+ * Handles two layouts:
+ *   1. The speedsolving wiki, which puts the code alone on a line followed by
+ *      one item per line until the next code.
+ *   2. "AB - Abacus, Ali Baba" or "AB: Abacus" all on one line.
+ *
+ * Anything it can't place is skipped, so a whole page can be pasted unedited.
  */
 export function parseSuggestionList(text: string): Record<string, string[]> {
   const words: Record<string, string[]> = {};
+  let code: string | null = null;
 
   for (const rawLine of text.split('\n')) {
-    const line = rawLine.replace(/^[\s*\u2022-]+/, '').trim();
-    const match = /^([A-Za-z]{2})\s*[-–—:]\s*(.+)$/.exec(line);
-    if (!match) continue;
+    const line = rawLine.trim();
+    if (line === '' || line === '...') continue;
 
-    const code = match[1].toUpperCase();
-    if (!isSpeffzCode(code)) continue;   // drops Y and Z rows
+    // A dash must have spaces around it, or "AK-47" would read as code AK.
+    const inline = /^([A-Z]{2})(?:\s*:\s*|\s+[-–—]\s+)(.+)$/.exec(line);
+    if (inline) {
+      code = isSpeffzCode(inline[1]) ? inline[1] : null;
+      if (code) {
+        words[code] ??= [];
+        for (const item of inline[2].split(/[,;]/).map((s) => s.trim()).filter(Boolean)) {
+          words[code].push(item);
+        }
+      }
+      continue;
+    }
 
-    const items = match[2]
-      .split(/[,;/]/)
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0);
+    // "A", "B" … section headers. Park until the next real code.
+    if (/^[A-Z]$/.test(line)) {
+      code = null;
+      continue;
+    }
 
-    if (items.length > 0) words[code] = items;
+    // A bare code line. Both letters must be capitals, so items like "To",
+    // "Ox", "Us" and "pH" stay items rather than being read as codes.
+    if (/^[A-Z]{2}$/.test(line)) {
+      code = isSpeffzCode(line) ? line : null;   // null parks the Y* and Z* rows
+      if (code) words[code] ??= [];
+      continue;
+    }
+
+    if (!code) continue;
+    words[code].push(line);   // push, not assign — "MC" heads two blocks on the page
+  }
+
+  for (const key of Object.keys(words)) {
+    words[key] = [...new Set(words[key])];
+    if (words[key].length === 0) delete words[key];
   }
 
   return words;

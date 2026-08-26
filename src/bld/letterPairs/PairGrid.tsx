@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { LETTERS, pieceOf, type Letter, type PieceKind } from '../../cube/speffz'
 import type { Settings } from '../../settings/defaults'
-import { FIELDS, blankEntry, filledCount , type PairEntry, type PairStore, type Field } from './types'
-import { blindSets, pairFlag, nextEmptyCode, type PairFlag } from './scope'
+import { blankEntry, cellLevel, hasImage, type PairEntry, type PairStore } from './types'
+import { blindSets, pairFlag, nextEmptyCode, liveCodes, type PairFlag } from './scope'
+import { suggestFor } from './suggester'
 import PairEditor from './PairEditor'
 import SuggestionLoader from './SuggestionLoader'
 
@@ -26,7 +27,7 @@ interface PairGridProps {
   suggestions: Record<string, string[]>
   onSuggestions: (words: Record<string, string[]>) => void
   onChangeEntry: (entry: PairEntry) => void
-  onFill: (field: Field) => void
+  onFill: () => void
 }
 
 export default function PairGrid({
@@ -34,24 +35,17 @@ export default function PairGrid({
   suggestions, onSuggestions, onChangeEntry, onFill,
 }: PairGridProps) {
   const blind = useMemo(() => blindSets(settings), [settings]);
+  const codes = useMemo(() => liveCodes(settings), [settings]);
 
-  // One pass, three numbers. Dead pairs are excluded from every denominator
-  // *and* numerator — otherwise changing buffers can print over 100%.
+  // Dead pairs are excluded from the numerator *and* the denominator —
+  // otherwise changing buffers can print over 100%.
   const totals = useMemo(() => {
-    let live = 0;
-    let started = 0;   // pairs with at least one of person/action/object
-    let done = 0;      // individual fields filled
-    for (const first of LETTERS) {
-      for (const second of LETTERS) {
-        if (pairFlag(first, second, settings) === 'dead') continue;
-        live += 1;
-        const level = filledCount(store.pairs[first + second]);
-        if (level > 0) started += 1;
-        done += level;
-      }
+    let started = 0;
+    for (const code of codes) {
+      if (hasImage(store.pairs[code])) started += 1;
     }
-    return { live, started, done, fields: live * FIELDS.length };
-  }, [settings, store]);
+    return { live: codes.length, started };
+  }, [codes, store]);
 
   const percent = pct(totals.started, totals.live);
 
@@ -83,16 +77,16 @@ export default function PairGrid({
         </div>
 
         <div className="legend">
-          <span><i className="swatch" style={{ background: 'var(--fill-0)' }} /> 0 of 3</span>
-          <span><i className="swatch" style={{ background: 'var(--fill-1)' }} /> 1 of 3</span>
-          <span><i className="swatch" style={{ background: 'var(--fill-2)' }} /> 2 of 3</span>
-          <span><i className="swatch" style={{ background: 'var(--fill-3)' }} /> complete</span>
+          <span><i className="swatch" style={{ background: 'var(--fill-0)' }} /> no image</span>
+          <span><i className="swatch" style={{ background: 'var(--fill-1)' }} /> weak</span>
+          <span><i className="swatch" style={{ background: 'var(--fill-2)' }} /> ok</span>
+          <span><i className="swatch" style={{ background: 'var(--fill-3)' }} /> solid</span>
           <span><i className="swatch" style={{ background: 'var(--flag)' }} /> flip / twist pair</span>
           <span><i className="swatch" style={{ background: 'var(--dead)' }} /> never traced</span>
         </div>
       </div>
 
-      <aside className="side-panel">
+      <aside className="panel method-panel">
         <h2 className="panel-title">Method</h2>
 
         <BufferPicker
@@ -119,26 +113,27 @@ export default function PairGrid({
           <i style={{ width: `${percent}%` }} />
         </div>
         <div className="stat">
-          <span>{totals.started} / {totals.live} pairs covered</span>
+          <span>{totals.started} / {totals.live} pairs with an image</span>
           <span>{percent}%</span>
         </div>
-        {/* <div className="stat">
-          <span>{totals.done} / {totals.fields} fields</span>
-          <span>{pct(totals.done, totals.fields)}%</span>
-        </div> */}
         <div className="actions">
-          {FIELDS.map((field) => (
-            <button key={field} onClick={() => onFill(field)}>Fill {field}</button>
-          ))}
+          <button onClick={onFill}>Fill images</button>
         </div>
 
-        <SuggestionLoader words={suggestions} onLoad={onSuggestions} />
+        <SuggestionLoader
+          words={suggestions}
+          liveCodes={codes}
+          onLoad={onSuggestions}
+        />
+      </aside>
 
+      <aside className="panel editor-panel">
         {entry ? (
           <PairEditor
             key={entry.code}
             entry={entry}
             flagLabel={FLAG_LABEL[pairFlag(entry.code[0] as Letter, entry.code[1] as Letter, settings)]}
+            suggestions={suggestFor(entry.code, suggestions)}
             onChange={onChangeEntry}
             onNext={() => {
               const next = nextEmptyCode(entry.code, store.pairs, settings);
@@ -193,7 +188,7 @@ function Row({ first, settings, pairs, selected, onSelect }: RowProps) {
           return <div className="cell dead" key={code} title={`${code} — ${FLAG_LABEL.dead}`} />;
         }
 
-        const level = filledCount(pairs[code]);
+        const level = cellLevel(pairs[code]);
         const classes = [
           'cell',
           `f${level}`,
@@ -201,11 +196,18 @@ function Row({ first, settings, pairs, selected, onSelect }: RowProps) {
           selected === code ? 'selected' : '',
         ].filter(Boolean).join(' ');
 
+        const image = pairs[code]?.image.trim();
+        const title = [
+          code,
+          image || 'no image',
+          flag === 'normal' ? '' : flag,
+        ].filter(Boolean).join(' — ');
+
         return (
           <button
             key={code}
             className={classes}
-            title={`${code} — ${level}/3${flag === 'normal' ? '' : ` — ${flag}`}`}
+            title={title}
             onClick={() => onSelect(code)}
           />
         );

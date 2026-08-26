@@ -4,15 +4,17 @@ import FillMode from './bld/letterPairs/FillMode';
 import {
   loadStore, loadSuggestions, saveStore, saveSuggestions,
 } from './bld/letterPairs/storage';
-import { isBlankEntry, type Field, type PairEntry } from './bld/letterPairs/types';
+import GlobalNotes from './bld/GlobalNotes';
+import { isBlankEntry, type PairEntry } from './bld/letterPairs/types';
 import { loadSettings, saveSettings, type Settings } from './settings/defaults';
 
-type Section = 'bld' | 'cfop' | 'timer'
+type Section = 'bld' | 'cfop' | 'timer' | 'notes'
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: 'bld', label: 'BLD' },
   { id: 'cfop', label: 'CFOP'},
   { id: 'timer', label: 'Timer' },
+  { id: 'notes', label: 'Notes' },
 ];
 
 export default function App() {
@@ -21,7 +23,7 @@ export default function App() {
   const [store, setStore] = useState(loadStore);
   const [settings, setSettings] = useState(loadSettings);
   const [selected, setSelected] = useState<string | null>(null);
-  const [fillField, setFillField] = useState<Field | null>(null);
+  const [filling, setFilling] = useState(false);
   const [suggestions, setSuggestions] = useState(loadSuggestions);
 
   function updateSettings(next: Settings) {
@@ -48,6 +50,10 @@ export default function App() {
     })
   }
 
+  function saveGlobalNotes(globalNotes: string) {
+    setStore((prev) => ({ ...prev, globalNotes }));
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -66,15 +72,13 @@ export default function App() {
       </header>
 
       <main className="content">
-        {section === 'bld' && (fillField ? (
+        {section === 'bld' && (filling ? (
           <FillMode
-            key={fillField}
             store={store}
             settings={settings}
-            field={fillField}
             words={suggestions}
             onChangeEntry={saveEntry}
-            onExit={() => setFillField(null)}
+            onExit={() => setFilling(false)}
           />
         ) : (
           <PairGrid
@@ -86,7 +90,7 @@ export default function App() {
             suggestions={suggestions}
             onSuggestions={updateSuggestions}
             onChangeEntry={saveEntry}
-            onFill={setFillField}
+            onFill={() => setFilling(true)}
           />
         ))}
         {section === 'cfop' && (
@@ -94,6 +98,9 @@ export default function App() {
         )}
         {section === 'timer' && (
           <p className="stub">Timer — with memo/exec split for BLD. Phase 5.</p>
+        )}
+        {section === 'notes' && (
+          <GlobalNotes value={store.globalNotes} onChange={saveGlobalNotes} />
         )}
       </main>
     </div>

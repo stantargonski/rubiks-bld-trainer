@@ -3,7 +3,7 @@ import {
   type Letter, type PieceKind,
 } from '../../cube/speffz';
 import type { Settings } from '../../settings/defaults';
-import { filledCount, type Field, type PairEntry } from './types';
+import { hasImage, type PairEntry } from './types';
 
 export type PairFlag = 'dead' | 'normal' | 'flip' | 'twist';
 
@@ -42,14 +42,19 @@ export function pairFlag(first: Letter, second: Letter, settings: Settings): Pai
   return 'normal';
 }
 
-export function livePairCount(settings: Settings): number {
-  let count = 0;
+/** Every pair that can actually come up with the current buffers. */
+export function liveCodes(settings: Settings): string[] {
+  const codes: string[] = [];
   for (const first of LETTERS) {
     for (const second of LETTERS) {
-      if (pairFlag(first, second, settings) !== 'dead') count += 1;
+      if (pairFlag(first, second, settings) !== 'dead') codes.push(first + second);
     }
   }
-  return count;
+  return codes;
+}
+
+export function livePairCount(settings: Settings): number {
+  return liveCodes(settings).length;
 }
 
 export function nextEmptyCode(
@@ -57,24 +62,20 @@ export function nextEmptyCode(
   pairs: Record<string, PairEntry>,
   settings: Settings,
 ): string | null {
-  const codes: string[] = []
-  for (const first of LETTERS) {
-    for (const second of LETTERS) {
-      if (pairFlag(first, second, settings) !== 'dead') codes.push(first + second)
+  const codes = liveCodes(settings);
+  const start = fromCode ? codes.indexOf(fromCode) + 1 : 0;
+
+  for (let step = 0; step < codes.length; step += 1) {
+    const code = codes[(start + step) % codes.length];
+    if (!hasImage(pairs[code])) return code;
   }
- }
- const start = fromCode ? codes.indexOf(fromCode) + 1 : 0
- for ( let step = 0; step < codes.length; step += 1) {
-  const code = codes[(start + step) % codes.length]
-  if (filledCount(pairs[code]) === 0) return code
- }
- return null
+  return null;
 }
-/** Pairs still missing this field. Flip/twist pairs first — they are guaranteed. */
+
+/** Pairs still missing an image. Flip/twist pairs first — they are guaranteed. */
 export function buildFillQueue(
   pairs: Record<string, PairEntry>,
   settings: Settings,
-  field: Field,
 ): string[] {
   const flagged: string[] = [];
   const rest: string[] = [];
@@ -85,7 +86,7 @@ export function buildFillQueue(
       if (flag === 'dead') continue;
 
       const code = first + second;
-      if ((pairs[code]?.[field] ?? '').trim() !== '') continue;
+      if (hasImage(pairs[code])) continue;
 
       if (flag === 'normal') rest.push(code);
       else flagged.push(code);
