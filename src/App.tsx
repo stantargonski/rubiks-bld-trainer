@@ -11,7 +11,7 @@ import { loadSettings, saveSettings, type Settings } from './settings/defaults';
 type Section = 'bld' | 'cfop' | 'timer' | 'notes'
 
 const SECTIONS: { id: Section; label: string }[] = [
-  { id: 'bld', label: 'BLD' },
+  { id: 'bld', label: '3BLD' },
   { id: 'cfop', label: 'CFOP'},
   { id: 'timer', label: 'Timer' },
   { id: 'notes', label: 'Notes' },

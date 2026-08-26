@@ -1,7 +1,7 @@
 export type Confidence = 0 | 1 | 2 | 3; // unset / weak / ok / solid
 
 export const IMAGE_TIP =
-  'Using objects or people in your memorisation is better for a memory palace';
+  'Using objects or people in your memorisation the weirder the better'
 
 export const CONFIDENCE_LABELS: Record<Confidence, string> = {
   0: 'unset',
