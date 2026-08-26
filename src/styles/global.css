@@ -114,22 +114,34 @@ button {
 .grid-panel {
   flex: 0 0 auto;
 }
-.method-panel {
+/* Both side panels live in here, so when there isn't room for them side by
+   side they wrap against each other rather than against the grid. */
+.side-stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+  flex: 1 1 320px;
+  min-width: 300px;
+}
+/* Identical sizing, so the two boxes are always the same width. */
+.method-panel,
+.editor-panel {
   flex: 1 1 280px;
   min-width: 260px;
   max-width: 340px;
 }
-.editor-panel {
-  flex: 1 1 320px;
-  min-width: 280px;
-  max-width: 400px;
-}
 @media (max-width: 900px) {
-  .pairs-layout {
+  .pairs-layout,
+  .side-stack {
     flex-direction: column;
   }
+  /* In a column, flex-basis sizes HEIGHT — leaving `1 1 320px` here would
+     force every panel to 320px tall. */
+  .side-stack,
   .method-panel,
   .editor-panel {
+    flex: 0 0 auto;
     max-width: none;
     width: 100%;
   }

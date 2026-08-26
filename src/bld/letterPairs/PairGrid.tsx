@@ -85,7 +85,7 @@ export default function PairGrid({
           <span><i className="swatch" style={{ background: 'var(--dead)' }} /> never traced</span>
         </div>
       </div>
-
+    <div className="side-stack">
       <aside className="panel method-panel">
         <h2 className="panel-title">Method</h2>
 
@@ -113,7 +113,7 @@ export default function PairGrid({
           <i style={{ width: `${percent}%` }} />
         </div>
         <div className="stat">
-          <span>{totals.started} / {totals.live} pairs with an image</span>
+          <span>{totals.started} / {totals.live} pairs</span>
           <span>{percent}%</span>
         </div>
         <div className="actions">
@@ -145,6 +145,7 @@ export default function PairGrid({
         )}
       </aside>
     </div>
+   </div>
   );
 }
 
