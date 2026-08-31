@@ -7,6 +7,7 @@ import {
 import GlobalNotes from './bld/GlobalNotes';
 import { isBlankEntry, type PairEntry } from './bld/letterPairs/types';
 import { loadSettings, saveSettings, type Settings } from './settings/defaults';
+import TimerPanel from './timer/TimerPanel'
 
 type Section = 'bld' | 'cfop' | 'timer' | 'notes'
 
@@ -96,9 +97,7 @@ export default function App() {
         {section === 'cfop' && (
           <p className="stub">CFOP trainer — F2L, OLL and PLL databases. Phase 4.</p>
         )}
-        {section === 'timer' && (
-          <p className="stub">Timer — with memo/exec split for BLD. Phase 5.</p>
-        )}
+        {section === 'timer' && <TimerPanel />}
         {section === 'notes' && (
           <GlobalNotes value={store.globalNotes} onChange={saveGlobalNotes} />
         )}

@@ -595,3 +595,89 @@ button {
   outline-offset: 2px;
   border-color: transparent;
 }
+/* ---------- timer ---------- */
+:root {
+  --go: #3fbf6f;
+  --holding: #ff2934;
+}
+
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 48px 16px;
+}
+.clock {
+  /* ch units on a tabular font keep the width fixed as digits change, so the
+     clock does not jitter left and right while it counts. */
+  font-variant-numeric: tabular-nums;
+  font-size: 120px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text);
+  transition: color 80ms ease;
+}
+.clock.holding { color: var(--holding); }
+.clock.ready   { color: var(--go); }
+.clock.running { color: var(--text-dim); }
+
+.timer-hint {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.solves {
+  width: 100%;
+  max-width: 260px;
+  margin: 18px 0 0;
+  padding: 8px;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.solves li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+}
+.solves li:nth-child(odd) { background: var(--panel-2); }
+.solve-n { color: var(--text-dim); font-size: 11px; }
+.solve-t { color: var(--text); font-weight: 600; }
+.scramble {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 10px;
+  max-width: 1000px;
+  color: var(--text);
+  font-size: 40px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  /* Visibility, not display: the block keeps its height while running so the
+     clock does not jump up the page mid-solve. */
+  opacity: 1;
+  transition: opacity 120ms ease;
+}
+.scramble.dim { opacity: 0; }
+
+.reroll {
+  padding: 5px 11px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+}
+.reroll:hover { color: var(--text); border-color: var(--text-dim); }
