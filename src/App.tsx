@@ -72,7 +72,7 @@ export default function App() {
        </nav>
       </header>
 
-      <main className="content">
+      <main className={section === 'timer' ? 'content flush' : 'content'}>
         {section === 'bld' && (filling ? (
           <FillMode
             store={store}
