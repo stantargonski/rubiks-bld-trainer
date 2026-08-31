@@ -2,11 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 export type Phase = 'idle' | 'holding' | 'ready' | 'running'
 
-// TODO make hold_ms configurable have different settings etc
-
-const HOLD_MS = 400
-
-export function useTimer(onStop: (ms: number) => void) { 
+export function useTimer(onStop: (ms: number) => void, holdMs = 400) { 
     const [phase , setPhase] = useState<Phase>('idle')
     const [ms, setMs] = useState(0)
 
@@ -20,6 +16,14 @@ export function useTimer(onStop: (ms: number) => void) {
     useEffect(() => {
         function onKeyDown(event: KeyboardEvent) {
             if (event.code !== 'Space' || event.repeat) return
+            const active = document.activeElement
+            if (
+                active instanceof HTMLInputElement ||
+                active instanceof HTMLTextAreaElement ||
+                active instanceof HTMLSelectElement
+            ) return
+            if (active instanceof HTMLButtonElement) active.blur()
+                
             event.preventDefault()
 
             if (phase === 'running') {
@@ -53,9 +57,9 @@ export function useTimer(onStop: (ms: number) => void) {
 
     useEffect(() => {
         if (phase !== 'holding') return
-        const id = setTimeout(() => setPhase('ready'), HOLD_MS)
+        const id = setTimeout(() => setPhase('ready'), holdMs)
         return () => clearTimeout(id)
-    }, [phase])
+    }, [phase, holdMs])
 
     useEffect (() => {
         if (phase !== 'running') return
