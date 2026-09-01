@@ -1,13 +1,14 @@
 import { formatTime } from './format'
-import { average, best, bestAverage, mean } from './stats'
-import { effectiveMs, type Solve } from './types'
+import { average, best, bestAverage, mean, meanExec, meanMemo } from './stats'
+import { effectiveMs, type PuzzleMode, type Solve } from './types'
 
 interface StatsPanelProps {
     solves: Solve[]
     decimals: 2 | 3
+    mode: PuzzleMode
 }
 
-export default function StatsPanel({ solves, decimals }: StatsPanelProps) {
+export default function StatsPanel({ solves, decimals, mode }: StatsPanelProps) {
     const latest = solves.length > 0 ? effectiveMs(solves[solves.length-1]) : NaN
 
     const rows = [
@@ -40,6 +41,13 @@ export default function StatsPanel({ solves, decimals }: StatsPanelProps) {
         <span>{solves.length} solves</span>
         <span>mean {formatTime(mean(solves), decimals)}</span>
       </p>
+
+      {mode === '3bld' && (
+        <p className="stats-foot">
+          <span>memo {formatTime(meanMemo(solves), decimals)}</span>
+          <span>exec {formatTime(meanExec(solves), decimals)}</span>
+        </p>
+      )}
     </>
   )
 }

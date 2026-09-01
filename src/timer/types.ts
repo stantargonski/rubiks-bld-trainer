@@ -1,8 +1,15 @@
 export type Penalty = 'none' | 'plus2' | 'dnf';
 
+/** What a session is timing. Drives the scramble, the phase machine and the
+    stats — a BLD session splits memo from execution, a 3x3 one doesn't. */
+export type PuzzleMode = '333' | '3bld';
+
 export interface Solve {
   id: number;        // Date.now() at the moment the solve stopped — also its timestamp
-  ms: number;        // the raw reading, never adjusted
+  ms: number;        // the raw total, never adjusted
+  /** Time from start to the memo split, or null for a solve that wasn't split.
+      Execution is always `ms - memoMs`, so it's never stored twice. */
+  memoMs: number | null;
   penalty: Penalty;
   scramble: string;
 }
@@ -10,6 +17,7 @@ export interface Solve {
 export interface Session {
   id: string;
   name: string;
+  mode: PuzzleMode;
   createdAt: number;
   /** Chronological, oldest first. The list UI reverses for display; the stats
       helpers rely on this order so `slice(-n)` means "the most recent n". */
@@ -17,7 +25,7 @@ export interface Session {
 }
 
 export interface TimerStore {
-  schemaVersion: 1;
+  schemaVersion: 2;
   sessions: Session[];
   activeId: string;
 }
@@ -36,18 +44,23 @@ export function effectiveMs(solve: Solve): number {
   return solve.penalty === 'plus2' ? solve.ms + 2000 : solve.ms;
 }
 
-export function newSolve(ms: number, scramble: string): Solve {
-  return { id: Date.now(), ms, penalty: 'none', scramble };
+/** Execution time, derived rather than stored so it can never disagree. */
+export function execMs(solve: Solve): number | null {
+  return solve.memoMs === null ? null : solve.ms - solve.memoMs;
 }
 
-export function newSession(name: string): Session {
+export function newSolve(ms: number, memoMs: number | null, scramble: string): Solve {
+  return { id: Date.now(), ms, memoMs, penalty: 'none', scramble };
+}
+
+export function newSession(name: string, mode: PuzzleMode = '333'): Session {
   const createdAt = Date.now();
-  return { id: `s${createdAt.toString(36)}`, name, createdAt, solves: [] };
+  return { id: `s${createdAt.toString(36)}`, name, mode, createdAt, solves: [] };
 }
 
 export function emptyTimerStore(): TimerStore {
   const first = newSession('Session 1');
-  return { schemaVersion: 1, sessions: [first], activeId: first.id };
+  return { schemaVersion: 2, sessions: [first], activeId: first.id };
 }
 
 /** Storage guarantees at least one session, so this always returns one. */

@@ -1,4 +1,4 @@
-import { effectiveMs, type Solve } from './types';
+import { effectiveMs, execMs, type Solve } from './types';
 
 /**
  * Three return values everything downstream agrees on:
@@ -55,6 +55,33 @@ export function average(solves: Solve[], size: number): number {
   let total = 0;
   for (let i = 1; i < size - 1; i += 1) total += window[i];
   return total / (size - 2);
+}
+
+/**
+ * Mean memo and mean execution over every split solve. DNFs are included:
+ * memorising and executing still happened, and in BLD a DNF is usually an exec
+ * failure — dropping them would flatter the memo figure you're trying to
+ * improve. Solves that were never split are skipped entirely.
+ */
+export function meanMemo(solves: Solve[]): number {
+  return meanOf(solves, (solve) => solve.memoMs);
+}
+
+export function meanExec(solves: Solve[]): number {
+  return meanOf(solves, execMs);
+}
+
+function meanOf(solves: Solve[], value: (solve: Solve) => number | null): number {
+  let total = 0;
+  let count = 0;
+
+  for (const solve of solves) {
+    const part = value(solve);
+    if (part === null) continue;
+    total += part;
+    count += 1;
+  }
+  return count === 0 ? NaN : total / count;
 }
 
 /** The best rolling average of `size` anywhere in the session. */

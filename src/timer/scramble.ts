@@ -23,7 +23,19 @@ function pick<T>(items: readonly T[]): T {
     return items[Math.floor(Math.random() * items.length)]
 }
 
-export function randomScramble(length = SCRAMBLE_LENGTH): string[] {
+/**
+ * WCA 3BLD scrambles end with a random cube rotation, so you can't assume
+ * white on top and have to work out your orientation as part of the solve.
+ * Six choices about x/z times four about y is all 24 orientations, once each.
+ */
+const ORIENT_X = ['', 'x', 'x2', "x'", 'z', "z'"] as const
+const ORIENT_Y = ['', 'y', 'y2', "y'"] as const
+
+export function randomOrientation(): string[] {
+    return [pick(ORIENT_X), pick(ORIENT_Y)].filter((move) => move !== '')
+}
+
+export function randomScramble(length = SCRAMBLE_LENGTH, orient = false): string[] {
     const moves: string[] = []
     let prev: Face | null = null
 
@@ -38,5 +50,5 @@ export function randomScramble(length = SCRAMBLE_LENGTH): string[] {
 
     prev = face
     }
-    return moves
+    return orient ? [...moves, ...randomOrientation()] : moves
 }

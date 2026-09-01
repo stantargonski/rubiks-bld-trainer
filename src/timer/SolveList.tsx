@@ -27,6 +27,9 @@ export default function SolveList({ solves, decimals, onPenalty, onDelete}: Solv
           >
             <span className="solve-n">{solves.length - position}</span>
             <span className="solve-t">{formatTime(effectiveMs(solve), decimals)}</span>
+            {solve.memoMs !== null && (
+              <span className="solve-memo">{formatTime(solve.memoMs, decimals)}</span>
+            )}
             {solve.penalty !== 'none' && (
               <span className="solve-tag">{solve.penalty === 'plus2' ? '+2' : 'DNF'}</span>
             )}

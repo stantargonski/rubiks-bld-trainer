@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export type Phase = 'idle' | 'holding' | 'ready' | 'running'
+export type Phase = 'idle' | 'holding' | 'ready' | 'memo' | 'running'
 const MODIFIERS = ['Shift', 'Control', 'Meta', 'CapsLock']
 
 export function useTimer(onStop: (ms: number) => void, holdMs = 400) { 
