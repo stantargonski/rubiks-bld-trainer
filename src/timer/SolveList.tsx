@@ -53,6 +53,17 @@ export default function SolveList({ solves, decimals, onPenalty, onDelete}: Solv
               >
                 DNF
               </button>
+              {/* Time and scramble together: on its own a time isn't worth
+                  pasting anywhere, and the scramble is what makes it a claim. */}
+              <button
+                type="button"
+                onClick={() => {
+                  const line = `${formatTime(effectiveMs(solve), decimals)}  ${solve.scramble}`
+                  void navigator.clipboard.writeText(line)
+                }}
+              >
+                copy
+              </button>
               <button
                 type="button"
                 className="danger"

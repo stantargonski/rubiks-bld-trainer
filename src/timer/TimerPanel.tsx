@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTimer } from './useTimer'
 import { formatTime } from './format'
 import { randomScramble } from './scramble'
@@ -7,21 +7,46 @@ import SessionPicker from './SessionPicker'
 import SolveList from './SolveList'
 import StatsPanel from './StatsPanel'
 import CubeNet from './CubeNet'
-import TimerSettingsDialog from './TimerSettingsDialog'
-import { loadTimerStore, saveTimerStore } from './storage'
-import { loadTimerSettings, saveTimerSettings, type TimerSettings } from './settings'
+import CompBar from './CompBar'
+import type { Dispatch, SetStateAction } from 'react'
+import type { TimerSettings } from './settings'
 import { average } from './stats'
+import { defaultFormat, resultOf, suggestTarget } from './comp'
+import { downloadText, sessionCsv, slug, stamp } from '../data/backup'
 import {
-  activeSession, emptyTimerStore, newSession, newSolve,
-  type Penalty, type PuzzleMode, type Session,
+  activeSession, effectiveMs, emptyTimerStore, newSession, newSolve,
+  type Penalty, type PuzzleMode, type Session, type TimerStore,
 } from './types'
 
 const MODES: PuzzleMode[] = ['333', '3bld']
 
-export default function TimerPanel() {
-  const [store, setStore] = useState(loadTimerStore)
-  const [settings, setSettings] = useState(loadTimerSettings)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+/** Where a comp round started, and what it started in. */
+interface Round {
+  sessionId: string
+  mode: PuzzleMode
+  start: number
+}
+
+interface TimerPanelProps {
+  store: TimerStore
+  setStore: Dispatch<SetStateAction<TimerStore>>
+  settings: TimerSettings
+  /** Takes you to the settings section — the gear no longer opens a dialog. */
+  onSettings: () => void
+}
+
+export default function TimerPanel({ store, setStore, settings, onSettings }: TimerPanelProps) {
+
+  // A comp round is a slice of the session's own solves rather than a mode of
+  // its own: nothing about timing changes, so nothing about a solve needs to
+  // record that it happened during one.
+  //
+  // It remembers which session and discipline it belongs to so that leaving
+  // either one retires it on the spot — a half-finished average shouldn't
+  // follow you to another session, and checking that here is a derivation
+  // rather than an effect racing the render that caused it.
+  const [round, setRound] = useState<Round | null>(null)
+  const [compTarget, setCompTarget] = useState('')
 
   // Derived every render — never mirrored into state of its own.
   const session = activeSession(store)
@@ -31,13 +56,6 @@ export default function TimerPanel() {
     randomScramble(settings.scrambleLength, session.mode === '3bld'),
   ])
   const [index, setIndex] = useState(0)
-
-  // Written straight through rather than debounced: a toggle is one deliberate
-  // click, not a stream of keystrokes like the solve store.
-  function updateSettings(next: TimerSettings) {
-    setSettings(next)
-    saveTimerSettings(next)
-  }
 
   /** Every change to the current session goes through here, so the nested
       spread is written once instead of six times. */
@@ -91,6 +109,21 @@ export default function TimerPanel() {
     })
   }
 
+  const format = defaultFormat(session.mode)
+  const openRound =
+    round && round.sessionId === session.id && round.mode === session.mode ? round : null
+  const roundTimes = openRound ? solves.slice(openRound.start).map(effectiveMs) : []
+  // What you're averaging now, as the basis for a goal slightly under it.
+  const recent = resultOf(format, solves.slice(-format.size).map(effectiveMs))
+
+  function startRound() {
+    setRound({ sessionId: session.id, mode: session.mode, start: solves.length })
+  }
+
+  function exportSession() {
+    downloadText(`${slug(session.name)}-${stamp()}.csv`, sessionCsv(session), 'text/csv')
+  }
+
   function goNext() {
     if (index + 1 < scrambles.length) {
       setIndex(index + 1)
@@ -110,11 +143,6 @@ export default function TimerPanel() {
     session.mode === '3bld',
   )
 
-  // Same debounce as the pair store: rapid changes don't hit disk.
-  useEffect(() => {
-    const id = setTimeout(() => saveTimerStore(store), 400)
-    return () => clearTimeout(id)
-  }, [store])
 
   const solving = (phase === 'running' || phase === 'memo') && settings.hideUiWhileRunning
 
@@ -130,6 +158,7 @@ export default function TimerPanel() {
               onCreate={createSession}
               onRename={(name) => updateActive((item) => ({ ...item, name }))}
               onDelete={deleteSession}
+              onExport={exportSession}
             />
           </div>
 
@@ -173,6 +202,19 @@ export default function TimerPanel() {
           />
         )}
 
+        {openRound && (
+          <CompBar
+            format={format}
+            times={roundTimes}
+            targetText={compTarget}
+            onTargetText={setCompTarget}
+            suggestion={suggestTarget(recent)}
+            decimals={settings.decimals}
+            onRestart={startRound}
+            onClose={() => setRound(null)}
+          />
+        )}
+
         <div className="timer-stage">
           <div className={`clock ${phase}`}>{formatTime(ms, settings.decimals)}</div>
 
@@ -200,20 +242,23 @@ export default function TimerPanel() {
             className="dock-gear"
             title="timer settings"
             aria-label="timer settings"
-            onClick={() => setSettingsOpen(true)}
+            onClick={onSettings}
           >
             ⚙
           </button>
-          {settings.showCubeNet && <CubeNet />}
+          <button
+            type="button"
+            className="dock-gear"
+            title="competition round"
+            aria-label="competition round"
+            aria-pressed={openRound !== null}
+            onClick={openRound ? () => setRound(null) : startRound}
+          >
+            🏁
+          </button>
+          {settings.showCubeNet && <CubeNet moves={scrambles[index]} />}
         </div>
       </div>
-
-      <TimerSettingsDialog
-        settings={settings}
-        open={settingsOpen}
-        onChange={updateSettings}
-        onClose={() => setSettingsOpen(false)}
-      />
     </div>
   )
 }
