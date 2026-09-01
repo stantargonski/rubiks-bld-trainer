@@ -1,21 +1,18 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { formatTime } from './format'
-import { average, best, bestAverage, mean, totalTime } from './stats'
-import { activeSession, type TimerStore } from './types'
+import { EVENTS, eventOf, type EventId } from './events'
+import {
+  ao5TrendPerHour, average, best, bestAverage, mean, secondsSpent, totalTime,
+} from './stats'
+import { activeSession, type Solve, type TimerStore } from './types'
 import TimeChart from './charts/TimeChart'
 import Histogram from './charts/Histogram'
 import SummaryTiles from './charts/SummaryTiles'
+import ActivityHeatmap from './charts/ActivityHeatmap'
+import { DAY, RANGES, SPANS, type Range } from './charts/ranges'
 
-/** Minutes and hours — the same shorthand the tiles use. */
-function duration(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '—'
-
-  const minutes = Math.round(ms / 60000)
-  if (minutes < 60) return `${minutes}m`
-
-  const hours = Math.floor(minutes / 60)
-  return `${hours}h ${minutes % 60}m`
-}
+/** The three the header calls out. Everything else lives in the per-event table. */
+const BENCHMARKS: EventId[] = ['333', '222', '444']
 
 interface StatsPageProps {
   store: TimerStore
@@ -26,89 +23,186 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
   // Opens on whatever you were just timing, which is nearly always what you
   // came here to look at.
   const [sessionId, setSessionId] = useState(() => activeSession(store).id)
+  const [range, setRange] = useState<Range>(365)
+  /** `all`, an `e:<event>` or an `s:<session>` — one control over two kinds of thing. */
+  const [filter, setFilter] = useState('all')
+  const [span, setSpan] = useState(0)
+
+  /**
+   * "Now", read once when the page opens rather than on every render.
+   *
+   * A state initialiser is the right place for it: reading the clock during a
+   * render would make what the heatmap draws depend on when React happened to
+   * re-run the component, and "today" only needs to be decided once per visit.
+   */
+  const [now] = useState(() => Date.now())
 
   const session = store.sessions.find((item) => item.id === sessionId) ?? activeSession(store)
+  const event = eventOf(session.event)
   const everySolve = store.sessions.flatMap((item) => item.solves)
 
-  // Best-of across sessions rather than an average over all of them: an ao5
-  // that spanned two sessions would be five solves that never happened together.
-  const bestEver = Math.min(...store.sessions.map((item) => best(item.solves)))
-  const bestAo5 = Math.min(...store.sessions.map((item) => bestAverage(item.solves, 5)))
+  /** Which events have ever been practised, in the catalogue's order. */
+  const practised = useMemo(
+    () => EVENTS.filter((item) =>
+      store.sessions.some((s) => s.event === item.id && s.solves.length > 0)),
+    [store],
+  )
+
+  /** Best single across every session of one event. */
+  function bestFor(id: EventId): number {
+    const sessions = store.sessions.filter((item) => item.event === id)
+    if (sessions.length === 0) return NaN
+    return Math.min(...sessions.map((item) => best(item.solves)))
+  }
+
+  const activitySolves = useMemo<Solve[]>(() => {
+    if (filter === 'all') return everySolve
+    if (filter.startsWith('e:')) {
+      return store.sessions
+        .filter((item) => item.event === filter.slice(2))
+        .flatMap((item) => item.solves)
+    }
+    return store.sessions.find((item) => item.id === filter.slice(2))?.solves ?? []
+  }, [filter, store, everySolve])
+
+  /** The session's solves, cut down to the graph's window. */
+  const windowed = useMemo(() => {
+    if (span === 0) return session.solves
+    const from = now - span * DAY
+    return session.solves.filter((solve) => solve.id >= from)
+  }, [session, span, now])
+
+  const trend = ao5TrendPerHour(windowed)
 
   return (
     <div className="stats-page">
-      <section className="settings-group">
-        <h2 className="panel-title">all time</h2>
-        <div className="tiles">
-          <div className="tile">
-            <span className="tile-label">solves</span>
-            <strong className="tile-value">{everySolve.length}</strong>
-          </div>
-          <div className="tile">
-            <span className="tile-label">time spent</span>
-            <strong className="tile-value">{duration(totalTime(everySolve))}</strong>
-          </div>
-          <div className="tile">
-            <span className="tile-label">sessions</span>
-            <strong className="tile-value">{store.sessions.length}</strong>
-          </div>
-          <div className="tile">
-            <span className="tile-label">best single</span>
-            <strong className="tile-value">{formatTime(bestEver, decimals)}</strong>
-          </div>
-          <div className="tile">
-            <span className="tile-label">best ao5</span>
-            <strong className="tile-value">{formatTime(bestAo5, decimals)}</strong>
-          </div>
+      {/* ---- who you are, in numbers ---- */}
+      <section className="card stats-header">
+        <div className="header-main">
+          <strong className="header-count">{everySolve.length}</strong>
+          <span className="header-label">solves</span>
         </div>
 
-        <table className="stats session-table">
-          <thead>
-            <tr>
-              <th scope="col">session</th>
-              <th scope="col">solves</th>
-              <th scope="col">best</th>
-              <th scope="col">ao5</th>
-              <th scope="col">mean</th>
-            </tr>
-          </thead>
-          <tbody>
-            {store.sessions.map((item) => (
-              <tr
-                key={item.id}
-                className={item.id === session.id ? 'current' : undefined}
-                onClick={() => setSessionId(item.id)}
-              >
-                <th scope="row">
-                  {item.name} <span className="mode-tag">{item.mode === '3bld' ? '3BLD' : '3x3'}</span>
-                </th>
-                <td>{item.solves.length}</td>
-                <td>{formatTime(best(item.solves), decimals)}</td>
-                <td>{formatTime(bestAverage(item.solves, 5), decimals)}</td>
-                <td>{formatTime(mean(item.solves), decimals)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="header-figures">
+          <div>
+            <span className="header-label">time solving</span>
+            <strong className="header-figure">{secondsSpent(totalTime(everySolve))}</strong>
+          </div>
+          <div>
+            <span className="header-label">sessions</span>
+            <strong className="header-figure">{store.sessions.length}</strong>
+          </div>
+          <div>
+            <span className="header-label">events practised</span>
+            <strong className="header-figure">{practised.length}</strong>
+          </div>
+        </div>
       </section>
 
-      <section className="settings-group">
-        <div className="stats-head">
-          <h2 className="panel-title">{session.name}</h2>
-          <select
-            className="session-select"
-            value={session.id}
-            onChange={(event) => setSessionId(event.target.value)}
-          >
-            {store.sessions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({item.solves.length})
-              </option>
-            ))}
-          </select>
+      {/* ---- the three numbers you'd quote someone ---- */}
+      <section className="card bench-strip">
+        <h2 className="bench-title">all-time best single</h2>
+        {BENCHMARKS.map((id) => (
+          <div className="bench" key={id}>
+            <span className="bench-label">{eventOf(id).short}</span>
+            <strong className="bench-value">{formatTime(bestFor(id), decimals)}</strong>
+          </div>
+        ))}
+      </section>
+
+      {/* ---- when you practised ---- */}
+      <section className="card">
+        <div className="card-head">
+          <h2 className="panel-title">activity</h2>
+          <div className="card-controls">
+            <select value={filter} onChange={(change) => setFilter(change.target.value)}>
+              <option value="all">everything</option>
+              {practised.length > 0 && (
+                <optgroup label="event">
+                  {practised.map((item) => (
+                    <option key={item.id} value={`e:${item.id}`}>{item.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="session">
+                {store.sessions.map((item) => (
+                  <option key={item.id} value={`s:${item.id}`}>
+                    {item.name} ({item.solves.length})
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+
+            <select
+              value={String(range)}
+              onChange={(change) => setRange(Number(change.target.value) as Range)}
+            >
+              {RANGES.map((item) => (
+                <option key={item.id} value={String(item.id)}>{item.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <SummaryTiles solves={session.solves} decimals={decimals} mode={session.mode} />
+        <ActivityHeatmap solves={activitySolves} range={range} now={now} />
+      </section>
+
+      {/* ---- every event you've touched ---- */}
+      {practised.length > 0 && (
+        <section className="card">
+          <h2 className="panel-title">by event</h2>
+          <table className="stats event-table">
+            <thead>
+              <tr>
+                <th scope="col">event</th>
+                <th scope="col">solves</th>
+                <th scope="col">best</th>
+                <th scope="col">best ao5</th>
+                <th scope="col">mean</th>
+              </tr>
+            </thead>
+            <tbody>
+              {practised.map((item) => {
+                const solves = store.sessions
+                  .filter((one) => one.event === item.id)
+                  .flatMap((one) => one.solves)
+
+                return (
+                  <tr key={item.id}>
+                    <th scope="row">{item.name}</th>
+                    <td>{solves.length}</td>
+                    <td>{formatTime(best(solves), decimals)}</td>
+                    <td>{formatTime(bestAverage(solves, 5), decimals)}</td>
+                    <td>{formatTime(mean(solves), decimals)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {/* ---- one session, in detail ---- */}
+      <section className="card">
+        <div className="card-head">
+          <h2 className="panel-title">
+            {session.name} <span className="mode-tag">{event.short}</span>
+          </h2>
+          <div className="card-controls">
+            <select
+              value={session.id}
+              onChange={(change) => setSessionId(change.target.value)}
+            >
+              {store.sessions.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} ({item.solves.length})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <SummaryTiles solves={session.solves} decimals={decimals} event={event} />
 
         <h3 className="chart-title">
           every solve
@@ -117,14 +211,37 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
             <i className="key ao12" /> ao12
             <i className="key pb" /> personal best
           </span>
+          <span className="chart-spans">
+            {SPANS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={span === item.id}
+                onClick={() => setSpan(item.id)}
+              >
+                {item.name}
+              </button>
+            ))}
+          </span>
         </h3>
-        <TimeChart solves={session.solves} decimals={decimals} />
+
+        <TimeChart solves={windowed} decimals={decimals} />
+
+        <p className="chart-note">
+          ao5 change per hour spent solving:{' '}
+          <b className={Number.isFinite(trend) ? (trend < 0 ? 'good' : 'bad') : undefined}>
+            {Number.isFinite(trend) ? `${trend > 0 ? '+' : ''}${trend.toFixed(2)}s` : '—'}
+          </b>
+          {Number.isFinite(trend) && (
+            <span> — {trend < 0 ? 'getting faster' : 'getting slower'}</span>
+          )}
+        </p>
 
         <h3 className="chart-title">
           where they land
           <span>ao5 now {formatTime(average(session.solves, 5), decimals)}</span>
         </h3>
-        <Histogram solves={session.solves} decimals={decimals} />
+        <Histogram solves={windowed} decimals={decimals} />
       </section>
     </div>
   )

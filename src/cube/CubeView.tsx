@@ -1,4 +1,5 @@
 import { faceOf, type CubeState, type Face } from './moves'
+import { faceOf as faceOfNxN, type CubeState as NxNState } from './nxn'
 import { FACE_COLOR } from './colors'
 
 /** Top-left cell of each face in the unfolded 12 × 9 net:
@@ -96,6 +97,46 @@ export function CubeTopView({ state, label }: { state: CubeState; label?: string
       {[0, 1, 2].map((i) => (
         <Sticker key={`r${i}`} color={right[2 - i]} col={4} row={1 + i} />
       ))}
+    </svg>
+  )
+}
+
+/**
+ * The same net at any cube size.
+ *
+ * The face origins are the 3x3 table scaled by `size`, because the layout is
+ * the same shape whatever n is: U above F, D below it, and L F R B as a strip.
+ * A 7x7 is a bigger grid of the same picture, not a different picture.
+ */
+export function NetView({ state, size, label }: {
+  state: NxNState
+  size: number
+  label?: string
+}) {
+  const faces = Object.keys(FACE_ORIGIN) as Face[]
+
+  return (
+    <svg
+      className="net-grid"
+      viewBox={`0 0 ${size * 4} ${size * 3}`}
+      role="img"
+      aria-label={label ?? 'scrambled cube'}
+    >
+      {faces.map((face) => {
+        const [originCol, originRow] = FACE_ORIGIN[face]
+        // The 3x3 table counts in faces, not stickers, so it scales cleanly.
+        const col0 = (originCol / 3) * size
+        const row0 = (originRow / 3) * size
+
+        return faceOfNxN(state, size, face).map((color, cell) => (
+          <Sticker
+            key={`${face}${cell}`}
+            color={color}
+            col={col0 + (cell % size)}
+            row={row0 + Math.floor(cell / size)}
+          />
+        ))
+      })}
     </svg>
   )
 }

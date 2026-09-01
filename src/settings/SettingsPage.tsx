@@ -1,8 +1,9 @@
 import { useRef, type ReactNode } from 'react'
 import DataSection from './DataSection'
+import TimerPreview from './TimerPreview'
 import { FONTS, THEMES, type Appearance } from '../theme/theme'
 import { clearBackground, downscale, putBackground } from '../theme/imageStore'
-import type { TimerSettings } from '../timer/settings'
+import { PREVIEW_MAX, PREVIEW_MIN, type TimerSettings } from '../timer/settings'
 
 /**
  * One row: what the setting is on the left, the control on the right.
@@ -57,7 +58,15 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (next: boolean)
   )
 }
 
-function Slider({ value, min, max, step, format, onChange }: {
+/**
+ * A number you nudge or type, in place of a slider.
+ *
+ * A slider is the wrong control for every setting on this page: they all have a
+ * value worth knowing exactly, and none of them wants to be dragged past
+ * fourteen wrong values on the way to the right one. Buttons step, and the field
+ * takes a number straight if you already know which one you want.
+ */
+function Stepper({ value, min, max, step, format, onChange }: {
   value: number
   min: number
   max: number
@@ -65,17 +74,24 @@ function Slider({ value, min, max, step, format, onChange }: {
   format: (value: number) => string
   onChange: (value: number) => void
 }) {
+  const clamp = (next: number) => Math.min(max, Math.max(min, next))
+  // Steps land on multiples of `step` even if the stored value isn't one.
+  const nudge = (direction: number) =>
+    onChange(clamp(Math.round((value + direction * step) / step) * step))
+
   return (
-    <div className="slider">
+    <div className="stepper">
+      <button type="button" onClick={() => nudge(-1)} disabled={value <= min} aria-label="less">−</button>
       <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
+        type="text"
+        inputMode="numeric"
+        value={format(value)}
+        onChange={(change) => {
+          const parsed = Number.parseFloat(change.target.value.replace(/[^\d.-]/g, ''))
+          if (Number.isFinite(parsed)) onChange(clamp(parsed))
+        }}
       />
-      <b>{format(value)}</b>
+      <button type="button" onClick={() => nudge(1)} disabled={value >= max} aria-label="more">+</button>
     </div>
   )
 }
@@ -114,11 +130,108 @@ export default function SettingsPage({
     onBackgroundChanged()
   }
 
-  const percent = (value: number) => `${Math.round(value * 100)}%`
-  const pixels = (value: number) => `${value}px`
+  // Every stepper on this page reads and writes a plain whole number; the
+  // fraction-valued settings are converted at their own call sites.
+  const plain = (value: number) => `${value}`
 
   return (
     <div className="settings-page">
+      <section className="settings-group">
+        <h2 className="panel-title">timer</h2>
+
+        <TimerPreview settings={timer} />
+
+        <Row label="scramble banner">
+          <Toggle value={timer.showScramble} onChange={(v) => setTimer('showScramble', v)} />
+        </Row>
+        <Row label="solve list">
+          <Toggle value={timer.showSolveList} onChange={(v) => setTimer('showSolveList', v)} />
+        </Row>
+        <Row label="session stats">
+          <Toggle value={timer.showStats} onChange={(v) => setTimer('showStats', v)} />
+        </Row>
+        <Row label="ao5 / ao12 under the clock" description="Hidden while a solve is running either way.">
+          <Toggle value={timer.showAverages} onChange={(v) => setTimer('showAverages', v)} />
+        </Row>
+        <Row label="scramble preview" description="The scramble drawn as a cube, bottom right. Drag its corner to resize.">
+          <Toggle value={timer.showCubeNet} onChange={(v) => setTimer('showCubeNet', v)} />
+        </Row>
+        <Row
+          label="hide everything while solving"
+          description="Fades the rail and the scramble the moment the clock starts."
+        >
+          <Toggle
+            value={timer.hideUiWhileRunning}
+            onChange={(v) => setTimer('hideUiWhileRunning', v)}
+          />
+        </Row>
+
+        <Row
+          label="timer while solving"
+          description="What the clock shows mid-solve. The solve is always recorded in full."
+        >
+          <Choice
+            options={[
+              { id: 'tenths', name: '0.1s' },
+              { id: 'seconds', name: 'seconds' },
+              { id: 'hidden', name: 'none' },
+            ]}
+            value={timer.runningDisplay}
+            onChange={(id) => setTimer('runningDisplay', id)}
+          />
+        </Row>
+
+        <Row
+          label="WCA inspection"
+          description="15 seconds before the solve, +2 over 15 and DNF over 17. Blindfolded events and FMC never inspect."
+        >
+          <Toggle value={timer.inspection} onChange={(v) => setTimer('inspection', v)} />
+        </Row>
+
+        <Row label="action when clicking scramble">
+          <Choice
+            options={[
+              { id: 'copy', name: 'copy' },
+              { id: 'next', name: 'next scramble' },
+              { id: 'none', name: 'none' },
+            ]}
+            value={timer.scrambleClick}
+            onChange={(id) => setTimer('scrambleClick', id)}
+          />
+        </Row>
+
+        <Row label="hold to arm" description="Milliseconds space is held before the timer will start.">
+          <Stepper
+            value={timer.holdMs} min={0} max={1000} step={50}
+            format={plain}
+            onChange={(value) => setTimer('holdMs', value)}
+          />
+        </Row>
+
+        <Row label="decimals">
+          <Choice
+            options={[{ id: '2', name: '12.34' }, { id: '3', name: '12.345' }]}
+            value={timer.decimals === 3 ? '3' : '2'}
+            onChange={(id) => setTimer('decimals', id === '3' ? 3 : 2)}
+          />
+        </Row>
+
+        <Row label="preview size" description="Width and height in pixels. Dragging the panel's corner does the same thing.">
+          <div className="pair-control">
+            <Stepper
+              value={timer.previewWidth} min={PREVIEW_MIN} max={PREVIEW_MAX} step={20}
+              format={plain}
+              onChange={(value) => setTimer('previewWidth', value)}
+            />
+            <Stepper
+              value={timer.previewHeight} min={PREVIEW_MIN} max={PREVIEW_MAX} step={20}
+              format={plain}
+              onChange={(value) => setTimer('previewHeight', value)}
+            />
+          </div>
+        </Row>
+      </section>
+
       <section className="settings-group">
         <h2 className="panel-title">appearance</h2>
 
@@ -160,11 +273,11 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="text size">
-          <Slider
-            value={appearance.fontScale} min={0.85} max={1.4} step={0.05}
-            format={percent}
-            onChange={(value) => setAppearance('fontScale', value)}
+        <Row label="text size" description="Percent of the standard size.">
+          <Stepper
+            value={Math.round(appearance.fontScale * 100)} min={85} max={140} step={5}
+            format={plain}
+            onChange={(value) => setAppearance('fontScale', value / 100)}
           />
         </Row>
 
@@ -193,88 +306,35 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="background blur">
-          <Slider
-            value={appearance.bgBlur} min={0} max={24} step={1}
-            format={pixels}
+        <Row label="background blur" description="Pixels.">
+          <Stepper
+            value={appearance.bgBlur} min={0} max={24} step={2}
+            format={plain}
             onChange={(value) => setAppearance('bgBlur', value)}
           />
         </Row>
 
-        <Row label="background dim" description="How far the picture fades back so text stays readable.">
-          <Slider
-            value={appearance.bgDim} min={0} max={0.9} step={0.05}
-            format={percent}
-            onChange={(value) => setAppearance('bgDim', value)}
+        <Row label="background dim" description="How far the picture fades back so text stays readable, as a percent.">
+          <Stepper
+            value={Math.round(appearance.bgDim * 100)} min={0} max={90} step={5}
+            format={plain}
+            onChange={(value) => setAppearance('bgDim', value / 100)}
           />
         </Row>
 
-        <Row label="panel opacity" description="How much of the picture shows through the panels.">
-          <Slider
-            value={appearance.panelOpacity} min={0.25} max={1} step={0.05}
-            format={percent}
-            onChange={(value) => setAppearance('panelOpacity', value)}
+        <Row label="panel opacity" description="How much of the picture shows through the panels, as a percent.">
+          <Stepper
+            value={Math.round(appearance.panelOpacity * 100)} min={25} max={100} step={5}
+            format={plain}
+            onChange={(value) => setAppearance('panelOpacity', value / 100)}
           />
         </Row>
 
-        <Row label="panel blur" description="Frosts whatever is behind a see-through panel.">
-          <Slider
-            value={appearance.panelBlur} min={0} max={24} step={1}
-            format={pixels}
+        <Row label="panel blur" description="Frosts whatever is behind a see-through panel. Pixels.">
+          <Stepper
+            value={appearance.panelBlur} min={0} max={24} step={2}
+            format={plain}
             onChange={(value) => setAppearance('panelBlur', value)}
-          />
-        </Row>
-      </section>
-
-      <section className="settings-group">
-        <h2 className="panel-title">timer</h2>
-
-        <Row label="scramble banner">
-          <Toggle value={timer.showScramble} onChange={(v) => setTimer('showScramble', v)} />
-        </Row>
-        <Row label="solve list">
-          <Toggle value={timer.showSolveList} onChange={(v) => setTimer('showSolveList', v)} />
-        </Row>
-        <Row label="session stats">
-          <Toggle value={timer.showStats} onChange={(v) => setTimer('showStats', v)} />
-        </Row>
-        <Row label="ao5 / ao12 under the clock">
-          <Toggle value={timer.showAverages} onChange={(v) => setTimer('showAverages', v)} />
-        </Row>
-        <Row label="cube preview" description="The scramble drawn as a cube, next to the gear.">
-          <Toggle value={timer.showCubeNet} onChange={(v) => setTimer('showCubeNet', v)} />
-        </Row>
-        <Row
-          label="hide everything while solving"
-          description="Fades the rail and the scramble the moment the clock starts."
-        >
-          <Toggle
-            value={timer.hideUiWhileRunning}
-            onChange={(v) => setTimer('hideUiWhileRunning', v)}
-          />
-        </Row>
-
-        <Row label="hold to arm" description="How long space is held before the timer will start.">
-          <Slider
-            value={timer.holdMs} min={0} max={1000} step={50}
-            format={(value) => `${value}ms`}
-            onChange={(value) => setTimer('holdMs', value)}
-          />
-        </Row>
-
-        <Row label="scramble length">
-          <Slider
-            value={timer.scrambleLength} min={1} max={50} step={1}
-            format={(value) => `${value} moves`}
-            onChange={(value) => setTimer('scrambleLength', value)}
-          />
-        </Row>
-
-        <Row label="decimals">
-          <Choice
-            options={[{ id: '2', name: '12.34' }, { id: '3', name: '12.345' }]}
-            value={timer.decimals === 3 ? '3' : '2'}
-            onChange={(id) => setTimer('decimals', id === '3' ? 3 : 2)}
           />
         </Row>
       </section>

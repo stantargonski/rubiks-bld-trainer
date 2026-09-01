@@ -4,7 +4,6 @@ import FillMode from './bld/letterPairs/FillMode';
 import {
   loadStore, loadSuggestions, saveStore, saveSuggestions,
 } from './bld/letterPairs/storage';
-import GlobalNotes from './bld/GlobalNotes';
 import { isBlankEntry, type PairEntry } from './bld/letterPairs/types';
 import { loadSettings, saveSettings, type Settings } from './settings/defaults';
 import TimerPanel from './timer/TimerPanel'
@@ -22,19 +21,20 @@ import {
 import { loadTimerStore, saveTimerStore } from './timer/storage';
 import StatsPage from './timer/StatsPage';
 
-type Section = 'bld' | 'cfop' | 'timer' | 'stats' | 'notes' | 'settings'
+type Section = 'timer' | 'stats' | 'bld' | 'cfop' | 'settings'
 
+// The timer is first because it is what the app is for; everything else is
+// something you go and look at between solves.
 const SECTIONS: { id: Section; label: string }[] = [
-  { id: 'bld', label: '3BLD' },
-  { id: 'cfop', label: 'CFOP'},
   { id: 'timer', label: 'Timer' },
   { id: 'stats', label: 'Stats' },
-  { id: 'notes', label: 'Notes' },
+  { id: 'bld', label: '3BLD' },
+  { id: 'cfop', label: 'CFOP'},
   { id: 'settings', label: 'Settings' },
 ];
 
 export default function App() {
-  const [section, setSection] = useState<Section>('bld');
+  const [section, setSection] = useState<Section>('timer');
 
   const [store, setStore] = useState(loadStore);
   const [settings, setSettings] = useState(loadSettings);
@@ -131,10 +131,6 @@ export default function App() {
     })
   }
 
-  function saveGlobalNotes(globalNotes: string) {
-    setStore((prev) => ({ ...prev, globalNotes }));
-  }
-
   return (
     <div className="app">
       <div className="app-bg" />
@@ -155,6 +151,7 @@ export default function App() {
       </header>
 
       <main className={section === 'timer' ? 'content flush' : 'content'}>
+       <div className="content-inner">
         {section === 'bld' && (filling ? (
           <FillMode
             store={store}
@@ -182,14 +179,11 @@ export default function App() {
             store={timerStore}
             setStore={setTimerStore}
             settings={timerSettings}
-            onSettings={() => setSection('settings')}
+            onSettings={updateTimerSettings}
           />
         )}
         {section === 'stats' && (
           <StatsPage store={timerStore} decimals={timerSettings.decimals} />
-        )}
-        {section === 'notes' && (
-          <GlobalNotes value={store.globalNotes} onChange={saveGlobalNotes} />
         )}
         {section === 'settings' && (
           <SettingsPage
@@ -200,6 +194,7 @@ export default function App() {
             onTimer={updateTimerSettings}
           />
         )}
+       </div>
       </main>
     </div>
   );

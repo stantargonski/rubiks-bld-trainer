@@ -1,8 +1,6 @@
-export type Penalty = 'none' | 'plus2' | 'dnf';
+import { DEFAULT_EVENT, eventOf, STARTER_EVENTS, type EventId } from './events';
 
-/** What a session is timing. Drives the scramble, the phase machine and the
-    stats — a BLD session splits memo from execution, a 3x3 one doesn't. */
-export type PuzzleMode = '333' | '3bld';
+export type Penalty = 'none' | 'plus2' | 'dnf';
 
 export interface Solve {
   id: number;        // Date.now() at the moment the solve stopped — also its timestamp
@@ -17,7 +15,10 @@ export interface Solve {
 export interface Session {
   id: string;
   name: string;
-  mode: PuzzleMode;
+  /** What this session is timing. Drives the scramble, the phase machine and
+      the stats — a blindfolded session splits memo from execution and skips
+      inspection, a 3x3 one does neither. */
+  event: EventId;
   createdAt: number;
   /** Chronological, oldest first. The list UI reverses for display; the stats
       helpers rely on this order so `slice(-n)` means "the most recent n". */
@@ -25,7 +26,7 @@ export interface Session {
 }
 
 export interface TimerStore {
-  schemaVersion: 2;
+  schemaVersion: 3;
   sessions: Session[];
   activeId: string;
 }
@@ -49,18 +50,35 @@ export function execMs(solve: Solve): number | null {
   return solve.memoMs === null ? null : solve.ms - solve.memoMs;
 }
 
-export function newSolve(ms: number, memoMs: number | null, scramble: string): Solve {
-  return { id: Date.now(), ms, memoMs, penalty: 'none', scramble };
+export function newSolve(
+  ms: number,
+  memoMs: number | null,
+  scramble: string,
+  penalty: Penalty = 'none',
+): Solve {
+  return { id: Date.now(), ms, memoMs, penalty, scramble };
 }
 
-export function newSession(name: string, mode: PuzzleMode = '333'): Session {
+/**
+ * `seed` disambiguates sessions created in the same millisecond — ten starter
+ * sessions built in one tick would otherwise all share an id, and the active
+ * one would be whichever the lookup happened to find first.
+ */
+export function newSession(name: string, event: EventId = DEFAULT_EVENT, seed = 0): Session {
   const createdAt = Date.now();
-  return { id: `s${createdAt.toString(36)}`, name, mode, createdAt, solves: [] };
+  return {
+    id: `s${createdAt.toString(36)}${seed > 0 ? `-${seed}` : ''}`,
+    name,
+    event,
+    createdAt,
+    solves: [],
+  };
 }
 
+/** Ten empty sessions, one per common event, with 3x3 open. */
 export function emptyTimerStore(): TimerStore {
-  const first = newSession('Session 1');
-  return { schemaVersion: 2, sessions: [first], activeId: first.id };
+  const sessions = STARTER_EVENTS.map((id, index) => newSession(eventOf(id).name, id, index));
+  return { schemaVersion: 3, sessions, activeId: sessions[0].id };
 }
 
 /** Storage guarantees at least one session, so this always returns one. */

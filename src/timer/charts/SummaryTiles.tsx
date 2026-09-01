@@ -1,19 +1,9 @@
 import { formatTime } from '../format'
 import {
-  average, best, bestAverage, mean, meanExec, meanMemo, stdev, totalTime,
+  average, best, bestAverage, mean, meanExec, meanMemo, secondsSpent, stdev, totalTime,
 } from '../stats'
-import type { PuzzleMode, Solve } from '../types'
-
-/** Minutes and hours, for a figure nobody wants read out in seconds. */
-function duration(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '—'
-
-  const minutes = Math.round(ms / 60000)
-  if (minutes < 60) return `${minutes}m`
-
-  const hours = Math.floor(minutes / 60)
-  return `${hours}h ${minutes % 60}m`
-}
+import type { Solve } from '../types'
+import type { WcaEvent } from '../events'
 
 function Tile({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
@@ -28,16 +18,16 @@ function Tile({ label, value, note }: { label: string; value: string; note?: str
 interface SummaryTilesProps {
   solves: Solve[]
   decimals: 2 | 3
-  mode: PuzzleMode
+  event: WcaEvent
 }
 
-export default function SummaryTiles({ solves, decimals, mode }: SummaryTilesProps) {
+export default function SummaryTiles({ solves, decimals, event }: SummaryTilesProps) {
   const time = (ms: number) => formatTime(ms, decimals)
 
   return (
     <div className="tiles">
       <Tile label="solves" value={String(solves.length)} />
-      <Tile label="time spent" value={duration(totalTime(solves))} />
+      <Tile label="time solving" value={secondsSpent(totalTime(solves))} note="seconds" />
       <Tile label="best" value={time(best(solves))} />
       <Tile label="mean" value={time(mean(solves))} />
       <Tile
@@ -52,7 +42,7 @@ export default function SummaryTiles({ solves, decimals, mode }: SummaryTilesPro
         note={`best ${time(bestAverage(solves, 12))}`}
       />
 
-      {mode === '3bld' && (
+      {event.split && (
         <>
           <Tile label="memo" value={time(meanMemo(solves))} note="mean over split solves" />
           <Tile label="exec" value={time(meanExec(solves))} note="mean over split solves" />

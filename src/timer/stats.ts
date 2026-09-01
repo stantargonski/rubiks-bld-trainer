@@ -150,3 +150,73 @@ export function bestAverage(solves: Solve[], size: number): number {
   }
   return lowest;
 }
+
+/**
+ * Time spent solving, as a plain count of seconds.
+ *
+ * No hours or minutes: this figure is read as "how much have I actually done",
+ * and one number you can compare against last week beats a unit-juggling
+ * "2h 45m" that you have to convert before it means anything.
+ */
+export function secondsSpent(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return '0';
+  return String(Math.round(ms / 1000));
+}
+
+/** A solve's day, in the local timezone — the day you were actually solving. */
+export function dayKey(when: number): string {
+  const date = new Date(when);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** How many solves landed on each day. The heatmap's whole data model. */
+export function dayCounts(solves: Solve[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const solve of solves) {
+    const key = dayKey(solve.id);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * How fast you're improving, in seconds of ao5 per hour at the cube.
+ *
+ * Least-squares slope of the rolling ao5 against cumulative time spent solving,
+ * rather than against solve number: an hour of 4x4 is fifty solves and an hour
+ * of 2x2 is four hundred, and "per solve" would call the 2x2 session the more
+ * productive one. Negative is improvement, because times go down.
+ *
+ * NaN until there are enough finite averages to fit a line through, which
+ * formatTime already renders as an em dash.
+ */
+export function ao5TrendPerHour(solves: Solve[]): number {
+  const averages = rollingAverages(solves, 5);
+
+  let elapsed = 0;
+  const points: { hours: number; value: number }[] = [];
+
+  for (let i = 0; i < solves.length; i += 1) {
+    elapsed += solves[i].ms;
+    if (Number.isFinite(averages[i])) {
+      points.push({ hours: elapsed / 3_600_000, value: averages[i] / 1000 });
+    }
+  }
+  if (points.length < 5) return NaN;
+
+  const n = points.length;
+  const meanHours = points.reduce((total, point) => total + point.hours, 0) / n;
+  const meanValue = points.reduce((total, point) => total + point.value, 0) / n;
+
+  let covariance = 0;
+  let variance = 0;
+  for (const point of points) {
+    const offset = point.hours - meanHours;
+    covariance += offset * (point.value - meanValue);
+    variance += offset * offset;
+  }
+  // Every solve in the same instant would divide by zero; there is no trend there.
+  return variance === 0 ? NaN : covariance / variance;
+}

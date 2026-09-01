@@ -1,29 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTimer } from './useTimer'
+import { clockPhase, clockText } from './display'
 import { formatTime } from './format'
-import { randomScramble } from './scramble'
+import { eventOf, type EventId } from './events'
+import { prepare, scrambleFor, scrambleText, type Scramble } from './scramble'
+import EventPicker from './EventPicker'
 import ScrambleBanner from './ScrambleBanner'
+import ScramblePreview from './ScramblePreview'
 import SessionPicker from './SessionPicker'
 import SolveList from './SolveList'
 import StatsPanel from './StatsPanel'
-import CubeNet from './CubeNet'
 import CompBar from './CompBar'
 import type { Dispatch, SetStateAction } from 'react'
 import type { TimerSettings } from './settings'
 import { average } from './stats'
-import { defaultFormat, resultOf, suggestTarget } from './comp'
+import { formatOf, resultOf, suggestTarget } from './comp'
 import { downloadText, sessionCsv, slug, stamp } from '../data/backup'
 import {
   activeSession, effectiveMs, emptyTimerStore, newSession, newSolve,
-  type Penalty, type PuzzleMode, type Session, type TimerStore,
+  type Penalty, type Session, type TimerStore,
 } from './types'
-
-const MODES: PuzzleMode[] = ['333', '3bld']
 
 /** Where a comp round started, and what it started in. */
 interface Round {
   sessionId: string
-  mode: PuzzleMode
+  event: EventId
   start: number
 }
 
@@ -31,8 +32,7 @@ interface TimerPanelProps {
   store: TimerStore
   setStore: Dispatch<SetStateAction<TimerStore>>
   settings: TimerSettings
-  /** Takes you to the settings section — the gear no longer opens a dialog. */
-  onSettings: () => void
+  onSettings: (next: TimerSettings) => void
 }
 
 export default function TimerPanel({ store, setStore, settings, onSettings }: TimerPanelProps) {
@@ -41,21 +41,26 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   // its own: nothing about timing changes, so nothing about a solve needs to
   // record that it happened during one.
   //
-  // It remembers which session and discipline it belongs to so that leaving
-  // either one retires it on the spot — a half-finished average shouldn't
-  // follow you to another session, and checking that here is a derivation
-  // rather than an effect racing the render that caused it.
+  // It remembers which session and event it belongs to so that leaving either
+  // one retires it on the spot — a half-finished average shouldn't follow you
+  // to another session, and checking that here is a derivation rather than an
+  // effect racing the render that caused it.
   const [round, setRound] = useState<Round | null>(null)
   const [compTarget, setCompTarget] = useState('')
 
   // Derived every render — never mirrored into state of its own.
   const session = activeSession(store)
   const solves = session.solves
+  const event = eventOf(session.event)
 
-  const [scrambles, setScrambles] = useState<string[][]>(() => [
-    randomScramble(settings.scrambleLength, session.mode === '3bld'),
-  ])
+  const [scrambles, setScrambles] = useState<Scramble[]>(() => [scrambleFor(event)])
   const [index, setIndex] = useState(0)
+  const scramble = scrambles[index]
+
+  // The 2x2 needs a table built before it can give real random-state scrambles.
+  // Asking as soon as the event is picked means it is nearly always ready by
+  // the time the first solve ends.
+  useEffect(() => { prepare(event) }, [event])
 
   /** Every change to the current session goes through here, so the nested
       spread is written once instead of six times. */
@@ -80,16 +85,15 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     }))
   }
 
-  function setMode(mode: PuzzleMode) {
-    updateActive((item) => ({ ...item, mode }))
-    // A 3x3 scramble carries no orientation suffix, so the queued ones are
-    // wrong for BLD (and vice versa). Start the queue over.
-    setScrambles([randomScramble(settings.scrambleLength, mode === '3bld')])
+  function setEvent(id: EventId) {
+    updateActive((item) => ({ ...item, event: id }))
+    // A queued 4x4 scramble is meaningless on a Pyraminx. Start over.
+    setScrambles([scrambleFor(eventOf(id))])
     setIndex(0)
   }
 
   function createSession() {
-    const created = newSession(`Session ${store.sessions.length + 1}`, session.mode)
+    const created = newSession(`Session ${store.sessions.length + 1}`, session.event)
     setStore((prev) => ({
       ...prev,
       sessions: [...prev.sessions, created],
@@ -109,15 +113,15 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     })
   }
 
-  const format = defaultFormat(session.mode)
+  const format = formatOf(event)
   const openRound =
-    round && round.sessionId === session.id && round.mode === session.mode ? round : null
+    round && round.sessionId === session.id && round.event === session.event ? round : null
   const roundTimes = openRound ? solves.slice(openRound.start).map(effectiveMs) : []
   // What you're averaging now, as the basis for a goal slightly under it.
   const recent = resultOf(format, solves.slice(-format.size).map(effectiveMs))
 
   function startRound() {
-    setRound({ sessionId: session.id, mode: session.mode, start: solves.length })
+    setRound({ sessionId: session.id, event: session.event, start: solves.length })
   }
 
   function exportSession() {
@@ -129,22 +133,35 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
       setIndex(index + 1)
       return
     }
-    setScrambles([...scrambles, randomScramble(settings.scrambleLength, session.mode === '3bld')])
+    setScrambles([...scrambles, scrambleFor(event)])
     setIndex(scrambles.length)
   }
 
-  const { phase, ms, memoMs } = useTimer(
-    (finished, memo) => {
-      const solve = newSolve(finished, memo, scrambles[index].join(' '))
+  const { phase, ms, memoMs, inspectMs } = useTimer(
+    (finished, memo, penalty) => {
+      const solve = newSolve(finished, memo, scrambleText(scramble), penalty)
       updateActive((item) => ({ ...item, solves: [...item.solves, solve] }))
       goNext()
     },
-    settings.holdMs,
-    session.mode === '3bld',
+    {
+      holdMs: settings.holdMs,
+      split: event.split,
+      inspection: settings.inspection && event.inspection,
+    },
   )
 
+  const timing = phase === 'running' || phase === 'memo'
+  const solving = timing && settings.hideUiWhileRunning
 
-  const solving = (phase === 'running' || phase === 'memo') && settings.hideUiWhileRunning
+  // Both of these are pure functions of the timer's state, over in ./display.ts
+  // where they can be checked without a browser.
+  const face = clockText({
+    phase,
+    ms,
+    inspectMs,
+    decimals: settings.decimals,
+    runningDisplay: settings.runningDisplay,
+  })
 
   return (
     <div className={solving ? 'timer-frame solving' : 'timer-frame'}>
@@ -162,19 +179,6 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
             />
           </div>
 
-          <div className="rail-mode">
-            {MODES.map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                aria-current={session.mode === mode}
-                onClick={() => setMode(mode)}
-              >
-                {mode === '333' ? '3x3' : '3BLD'}
-              </button>
-            ))}
-          </div>
-
           <div className="rail-list">
             <SolveList
               solves={solves}
@@ -186,7 +190,7 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
 
           {settings.showStats && (
             <div className="rail-stats">
-              <StatsPanel solves={solves} decimals={settings.decimals} mode={session.mode} />
+              <StatsPanel solves={solves} decimals={settings.decimals} event={event} />
             </div>
           )}
         </aside>
@@ -195,60 +199,60 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
       <div className="timer-main">
         {settings.showScramble && (
           <ScrambleBanner
-            moves={scrambles[index]}
+            scramble={scramble}
             canGoBack={index > 0}
             onLast={() => setIndex(index - 1)}
             onNext={goNext}
-          />
+            action={settings.scrambleClick}
+          >
+            <EventPicker value={session.event} onChange={setEvent} />
+          </ScrambleBanner>
         )}
 
-        {openRound && (
-          <CompBar
-            format={format}
-            times={roundTimes}
-            targetText={compTarget}
-            onTargetText={setCompTarget}
-            suggestion={suggestTarget(recent)}
-            decimals={settings.decimals}
-            onRestart={startRound}
-            onClose={() => setRound(null)}
-          />
-        )}
-
+        {/* Both of these live in the stage rather than in this column, so they
+            centre on the window rather than on the space the rail leaves. */}
         <div className="timer-stage">
-          <div className={`clock ${phase}`}>{formatTime(ms, settings.decimals)}</div>
-
-          {/* memoMs is only ever non-null on a split solve, so no mode check. */}
-          {memoMs !== null && (
-            <div className="split">
-              <span>memo <b>{formatTime(memoMs, settings.decimals)}</b></span>
-              <span>exec {formatTime(ms - memoMs, settings.decimals)}</span>
+          {openRound && (
+            <div className="stage-top">
+              <CompBar
+                format={format}
+                times={roundTimes}
+                targetText={compTarget}
+                onTargetText={setCompTarget}
+                suggestion={suggestTarget(recent)}
+                decimals={settings.decimals}
+                onRestart={startRound}
+                onClose={() => setRound(null)}
+              />
             </div>
           )}
 
-          {settings.showAverages && (
-            <div className="averages">
-              <span>ao5 <b>{formatTime(average(solves, 5), settings.decimals)}</b></span>
-              <span>ao12 <b>{formatTime(average(solves, 12), settings.decimals)}</b></span>
-            </div>
-          )}
+          <div className="stage-clock">
+            <div className={`clock ${clockPhase(phase, inspectMs)}`}>{face}</div>
+
+            {/* memoMs is only ever non-null on a split solve, so no mode check. */}
+            {memoMs !== null && !timing && (
+              <div className="split">
+                <span>memo <b>{formatTime(memoMs, settings.decimals)}</b></span>
+                <span>exec {formatTime(ms - memoMs, settings.decimals)}</span>
+              </div>
+            )}
+
+            {/* Hidden while the clock is running whatever else is on screen —
+                an average you can't change yet is the definition of a distraction. */}
+            {settings.showAverages && !timing && (
+              <div className="averages">
+                <span>ao5 <b>{formatTime(average(solves, 5), settings.decimals)}</b></span>
+                <span>ao12 <b>{formatTime(average(solves, 12), settings.decimals)}</b></span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* The gear sits outside the showCubeNet check — inside it, turning the
-            preview off would leave no way to turn it back on. */}
         <div className="timer-dock">
           <button
             type="button"
-            className="dock-gear"
-            title="timer settings"
-            aria-label="timer settings"
-            onClick={onSettings}
-          >
-            ⚙
-          </button>
-          <button
-            type="button"
-            className="dock-gear"
+            className="dock-round"
             title="competition round"
             aria-label="competition round"
             aria-pressed={openRound !== null}
@@ -256,7 +260,16 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
           >
             🏁
           </button>
-          {settings.showCubeNet && <CubeNet moves={scrambles[index]} />}
+          {settings.showCubeNet && (
+            <ScramblePreview
+              event={event}
+              scramble={scramble}
+              width={settings.previewWidth}
+              height={settings.previewHeight}
+              onResize={(previewWidth, previewHeight) =>
+                onSettings({ ...settings, previewWidth, previewHeight })}
+            />
+          )}
         </div>
       </div>
     </div>

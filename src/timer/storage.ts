@@ -1,3 +1,4 @@
+import { DEFAULT_EVENT, isEventId, type EventId } from './events';
 import { emptyTimerStore, type Session, type Solve, type TimerStore } from './types';
 
 export const TIMER_KEY = 'timer.store.v1';   // storage slot; the version lives inside the JSON
@@ -17,11 +18,12 @@ export function saveTimerStore(store: TimerStore): void {
 }
 
 /**
- * v1 → v2: sessions gain `mode` and solves gain `memoMs`. Both are pure
- * additions, so every existing solve survives — it just becomes a '333' solve
- * with no memo split, which is exactly what it was.
+ * v1 → v2: sessions gained `mode` and solves gained `memoMs`.
+ * v2 → v3: `mode` becomes a full WCA `event`, so '3bld' reads as '333bf' and
+ * everything else as '333'. Both steps are pure widenings — no solve is ever
+ * dropped for being older than the schema.
  *
- * This runs on every load, so it has to be idempotent: a v2 store passes
+ * This runs on every load, so it has to be idempotent: a v3 store passes
  * through unchanged. It also doubles as the integrity pass — a session of
  * solves is the one thing in this app you cannot retype, and one bad record
  * from a hand-edit shouldn't blank the history. Unreadable entries are dropped;
@@ -31,18 +33,21 @@ export function migrate(input: unknown): TimerStore {
   if (!input || typeof input !== 'object') return emptyTimerStore();
 
   // Deliberately not Partial<TimerStore>: that types schemaVersion as the
-  // literal 2, which makes the v1 check unreachable. Incoming JSON can be any
-  // version, so it has to be read as a plain number.
+  // literal 3, which makes the older checks unreachable. Incoming JSON can be
+  // any version, so it has to be read as a plain number.
   const raw = input as { schemaVersion?: number; sessions?: unknown; activeId?: unknown };
-  if (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) return emptyTimerStore();
+  if (raw.schemaVersion !== 1 && raw.schemaVersion !== 2 && raw.schemaVersion !== 3) {
+    return emptyTimerStore();
+  }
   if (!Array.isArray(raw.sessions)) return emptyTimerStore();
 
   const sessions: Session[] = raw.sessions
-    .filter((session): session is Session => !!session && typeof session.id === 'string')
+    .filter((session): session is Session & { mode?: unknown } =>
+      !!session && typeof session.id === 'string')
     .map((session) => ({
       id: session.id,
       name: typeof session.name === 'string' && session.name !== '' ? session.name : 'Session',
-      mode: session.mode === '3bld' ? '3bld' : '333',
+      event: readEvent(session),
       createdAt: typeof session.createdAt === 'number' ? session.createdAt : 0,
       solves: Array.isArray(session.solves) ? session.solves.map(readSolve).filter(isSolve) : [],
     }));
@@ -51,7 +56,13 @@ export function migrate(input: unknown): TimerStore {
 
   // A dangling activeId would leave the UI with no session to render.
   const active = sessions.find((session) => session.id === raw.activeId);
-  return { schemaVersion: 2, sessions, activeId: (active ?? sessions[0]).id };
+  return { schemaVersion: 3, sessions, activeId: (active ?? sessions[0]).id };
+}
+
+/** v3's `event` if it's there and real, otherwise v2's `mode`, otherwise 3x3. */
+function readEvent(session: { event?: unknown; mode?: unknown }): EventId {
+  if (isEventId(session.event)) return session.event;
+  return session.mode === '3bld' ? '333bf' : DEFAULT_EVENT;
 }
 
 /** Fills in the v2 field. A v1 solve has no memoMs at all; null is correct. */

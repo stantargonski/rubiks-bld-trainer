@@ -88,9 +88,18 @@ const F = permutation([
   [6, 9, 29, 44], [7, 12, 28, 41], [8, 15, 27, 38],
 ]);
 
+/**
+ * The two corner cycles here pair U with the *opposite* D corner: B carries the
+ * top-back-right cubie to top-back-left, so U's back-right sticker (2) follows
+ * the corner round to L, D's back-LEFT sticker (33) and R's back-bottom one
+ * (17) — not D's back-right. Getting this pair crossed produces a cube that is
+ * still a valid permutation and still passes any U-layer check, which is
+ * exactly how it survived: PLL algs hardly use B, so nothing noticed until a
+ * full scramble was drawn as a net.
+ */
 const B = permutation([
   [45, 47, 53, 51], [46, 50, 52, 48],
-  [2, 36, 35, 11], [1, 39, 34, 14], [0, 42, 33, 17],
+  [2, 36, 33, 17], [1, 39, 34, 14], [0, 42, 35, 11],
 ]);
 
 // Slices follow the face they sit beside: M follows L, E follows D, S follows F.

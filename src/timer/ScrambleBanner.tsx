@@ -1,46 +1,83 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import type { Scramble } from './scramble'
+import { scrambleText } from './scramble'
+import type { ScrambleClick } from './settings'
 
 interface ScrambleBannerProps {
-    moves: string[]
-    canGoBack: boolean
-    onLast: () => void
-    onNext: () => void
+  scramble: Scramble
+  canGoBack: boolean
+  onLast: () => void
+  onNext: () => void
+  /** What a click on the scramble itself does. */
+  action: ScrambleClick
+  /** The event picker, rendered above the scramble. */
+  children?: ReactNode
 }
 
-export default function ScrambleBanner({ moves, canGoBack, onLast, onNext }: ScrambleBannerProps) {
-    const [copied, setCopied] = useState(false)
-    useEffect(() => {
-        if (!copied) return
-        const id = setTimeout(() => setCopied(false), 1200)
-        return () => clearTimeout(id)
+export default function ScrambleBanner({
+  scramble, canGoBack, onLast, onNext, action, children,
+}: ScrambleBannerProps) {
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!copied) return
+    const id = setTimeout(() => setCopied(false), 1200)
+    return () => clearTimeout(id)
   }, [copied])
 
-    async function copy() {
-        try {
-            await navigator.clipboard.writeText(moves.join(' '))
-            setCopied(true)
-        } catch {
-            setCopied(false)
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(scrambleText(scramble))
+      setCopied(true)
+    } catch {
+      setCopied(false)
     }
+  }
+
+  const title = action === 'copy' ? 'click to copy'
+    : action === 'next' ? 'click for the next scramble'
+      : undefined
+
+  function onClick() {
+    if (action === 'copy') void copy()
+    else if (action === 'next') onNext()
   }
 
   return (
     <div className="scramble-bar">
-      <button
-        type="button"
-        className={copied ? 'scramble-text copied' : 'scramble-text'}
-        title="click to copy"
-        onClick={() => { void copy() }}
-      >
-        {moves.map((move, index) => (
-          <span key={index}>{move}</span>
-        ))}
-      </button>
+      <div className="scramble-head">{children}</div>
 
-      <div className="scramble-nav">
-        <button type="button" onClick={onLast} disabled={!canGoBack}>‹ last</button>
-        <button type="button" onClick={onNext}>next ›</button>
+      <div className="scramble-body">
+        <button
+          type="button"
+          className={copied ? 'scramble-text copied' : 'scramble-text'}
+          title={title}
+          // A click target that does nothing shouldn't look like a click target.
+          data-inert={action === 'none' ? 'true' : undefined}
+          onClick={onClick}
+        >
+          {/* Megaminx and multi-blind come pre-broken into rows; everything else
+              is a flat run of tokens that wraps wherever it needs to. */}
+          {scramble.lines
+            ? scramble.lines.map((line, index) => (
+              <span key={index} className="scramble-line">{line}</span>
+            ))
+            : scramble.moves.map((move, index) => <span key={index}>{move}</span>)}
+        </button>
+
+        <div className="scramble-nav">
+          <button type="button" onClick={onLast} disabled={!canGoBack}>‹ last</button>
+          <button type="button" onClick={onNext}>next ›</button>
+        </div>
       </div>
+
+      {/* Blindfolded events end held at an angle. It's an instruction, not part
+          of the scramble, so it reads as one instead of as four more tokens. */}
+      {scramble.rotation.length > 0 && (
+        <p className="scramble-hold">
+          then hold it <b>{scramble.rotation.join(' ')}</b>
+        </p>
+      )}
     </div>
   )
 }

@@ -70,7 +70,7 @@ const SLOTS: Slot[] = [
   {
     key: TIMER_KEY,
     label: 'sessions and solves',
-    accept: (value) => (looksLikeStore(value, [1, 2], 'sessions') ? migrateTimer(value) : null),
+    accept: (value) => (looksLikeStore(value, [1, 2, 3], 'sessions') ? migrateTimer(value) : null),
   },
   {
     key: TIMER_SETTINGS_KEY,
@@ -231,9 +231,10 @@ function seconds(ms: number | null): string {
  */
 export function sessionCsv(session: Session): string {
   const rows = [
-    ['no', 'time', 'penalty', 'effective', 'memo', 'exec', 'date', 'scramble'],
+    ['no', 'event', 'time', 'penalty', 'effective', 'memo', 'exec', 'date', 'scramble'],
     ...session.solves.map((solve, index) => [
       String(index + 1),
+      session.event,
       seconds(solve.ms),
       solve.penalty,
       seconds(effectiveMs(solve)),

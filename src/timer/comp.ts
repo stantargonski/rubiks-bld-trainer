@@ -1,12 +1,13 @@
 import { simpleMean, trimmedAverage } from './stats';
-import type { PuzzleMode } from './types';
+import type { WcaEvent } from './events';
 
 /**
  * A competition round: how many solves it takes and how they're scored.
  *
- * 3x3 finals are an average of five with the best and worst dropped; 3BLD is a
- * mean of three with nothing dropped, which is why one DNF is survivable in the
- * first and fatal in the second.
+ * 3x3 finals are an average of five with the best and worst dropped; 3BLD and
+ * the big cubes are a mean of three with nothing dropped, which is why one DNF
+ * is survivable in the first and fatal in the second. Which one an event uses
+ * is a field on the event itself.
  */
 export interface CompFormat {
   id: 'ao5' | 'mo3';
@@ -19,8 +20,8 @@ export const FORMATS: Record<CompFormat['id'], CompFormat> = {
   mo3: { id: 'mo3', size: 3, trimmed: false },
 };
 
-export function defaultFormat(mode: PuzzleMode): CompFormat {
-  return mode === '3bld' ? FORMATS.mo3 : FORMATS.ao5;
+export function formatOf(event: WcaEvent): CompFormat {
+  return FORMATS[event.format];
 }
 
 /** The round's score. NaN until every solve is in, Infinity for a DNF average. */

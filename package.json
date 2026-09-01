@@ -7,8 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "check:algs": "node --experimental-strip-types scripts/check-algs.ts",
-    "preview": "vite preview"
+    "check:algs": "node --experimental-strip-types --import ./scripts/ts-loader.mjs scripts/check-algs.ts",
+    "preview": "vite preview",
+    "check:cube": "node --experimental-strip-types --import ./scripts/ts-loader.mjs scripts/check-cube.ts",
+    "check:scramble": "node --experimental-strip-types --import ./scripts/ts-loader.mjs scripts/check-scramble.ts",
+    "check": "npm run check:algs && npm run check:cube && npm run check:scramble && npm run check:timer",
+    "check:timer": "node --experimental-strip-types --import ./scripts/ts-loader.mjs scripts/check-timer.ts"
   },
   "dependencies": {
     "react": "^19.2.8",
