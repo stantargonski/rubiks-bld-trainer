@@ -30,9 +30,21 @@ export const TIMER_SETTINGS_KEY = 'timer.settings.v1';
 export function loadTimerSettings(): TimerSettings {
   try {
     const raw = localStorage.getItem(TIMER_SETTINGS_KEY);
-    if (!raw) return DEFAULT_TIMER_SETTINGS;
+    return raw ? readTimerSettings(JSON.parse(raw)) : DEFAULT_TIMER_SETTINGS;
+  } catch {
+    return DEFAULT_TIMER_SETTINGS;
+  }
+}
 
-    const parsed = JSON.parse(raw) as Partial<TimerSettings> | null;
+/**
+ * Settings out of an untrusted blob — a saved one, or one out of a backup file
+ * someone hand-edited. Every field is clamped rather than trusted, and anything
+ * unreadable falls back to its default, so this cannot fail: the worst case is
+ * the stock settings, which is never worse than refusing to start.
+ */
+export function readTimerSettings(input: unknown): TimerSettings {
+  try {
+    const parsed = input as Partial<TimerSettings> | null;
     if (!parsed || parsed.schemaVersion !== 1) return DEFAULT_TIMER_SETTINGS;
 
     // Field by field rather than a spread, so a key added here later gets its

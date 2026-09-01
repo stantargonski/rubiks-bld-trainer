@@ -8,10 +8,11 @@ interface SessionPickerProps {
   onCreate: () => void
   onRename: (name: string) => void
   onDelete: () => void
+  onExport: () => void
 }
 
 export default function SessionPicker({
-  sessions, activeId, onSelect, onCreate, onRename, onDelete,
+  sessions, activeId, onSelect, onCreate, onRename, onDelete, onExport,
 }: SessionPickerProps) {
   const [draft, setDraft] = useState<string | null>(null)   // null = not renaming
   const input = useRef<HTMLInputElement>(null)
@@ -65,6 +66,8 @@ export default function SessionPicker({
         onClick={() => setDraft(active?.name ?? '')}>✎</button>
       <button type="button" className="rail-icon" title="new session"
         onClick={onCreate}>+</button>
+      <button type="button" className="rail-icon" title="export session as CSV"
+        onClick={onExport}>⤓</button>
       <button type="button" className="rail-icon" title="delete session"
         onClick={onDelete}>×</button>
     </>
