@@ -7,10 +7,17 @@ import type { AlgCase } from './types';
  * you answer first when the case comes up (which corners swap, or none), and
  * it's what makes the set learnable in order rather than as 21 unrelated algs.
  *
- * The algorithms are the widely-used defaults. They're a starting point, not a
- * prescription: check them against your own sheet, and where you already know
- * a different finger-trick, override it — the store keeps your version and
- * `activeAlg` prefers it.
+ * !! THE ALGORITHMS BELOW ARE NOT YET VERIFIED. !!
+ *
+ * Running each one through src/cube/moves.ts against a solved cube shows:
+ *   - Ab and Ja are simply wrong — no closing rotation rescues them.
+ *   - Aa, E and V are missing their closing rotation (x', x and y').
+ *   - Z, Jb, the four G perms and several others come out with a U-layer
+ *     rotation baked in, i.e. the alg leaves an AUF after it "solves".
+ *
+ * Do not drill from these until the table has been replaced from a trusted
+ * source and re-checked with the engine. `activeAlg` already prefers whatever
+ * you type in yourself, so overriding one is the safe path meanwhile.
  */
 export const PLL_CASES: AlgCase[] = [
   // ----- edges only: all four corners already solved -----
