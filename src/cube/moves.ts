@@ -131,9 +131,64 @@ export function applyAlg(state: CubeState, text: string): CubeState {
   return next;
 }
 
+/**
+ * The same moves undone, in reverse. Turns "the alg that solves this case"
+ * into "the case you are looking at": applying an alg to a solved cube gives
+ * the position it *creates*, which for anything but an involution is a
+ * different case than the one it fixes.
+ */
+export function invertAlg(text: string): string {
+  return parseAlg(text)
+    .map((token) => {
+      if (token.endsWith('2')) return token;   // a half turn is its own inverse
+      return token.endsWith("'") ? token.slice(0, -1) : `${token}'`;
+    })
+    .reverse()
+    .join(' ');
+}
+
 export function isSolved(state: CubeState): boolean {
   const solved = solvedCube();
   return state.every((face, i) => face === solved[i]);
+}
+
+/** The U-layer side stickers: the ring you actually recognise a case from. */
+const RING = [9, 10, 11, 18, 19, 20, 36, 37, 38, 45, 46, 47];
+
+/**
+ * The same case, turned to the angle it's normally drawn at.
+ *
+ * Plenty of good algs finish with the last layer rotated — they solve the case
+ * and leave you an AUF, which costs nothing to fix on a real cube but means the
+ * position they *create* is the case seen from a quarter turn off. Diagrams
+ * drawn that way are unreadable for recognition, which is the entire point of
+ * them.
+ *
+ * Rotating the U layer never changes which case you're looking at, so this is
+ * free to do: of the four AUFs, take the one with the most side stickers
+ * already home. That's the angle alg sheets use, because it's the angle where
+ * whatever the case leaves solved lines up with the faces it belongs to.
+ */
+export function alignLastLayer(state: CubeState): CubeState {
+  const solved = solvedCube();
+
+  let best = state;
+  let bestScore = -1;
+  let turned = state;
+
+  for (let i = 0; i < 4; i += 1) {
+    let score = 0;
+    for (const facelet of RING) {
+      if (turned[facelet] === solved[facelet]) score += 1;
+    }
+    // Strictly greater, so a tie keeps the alg's own orientation.
+    if (score > bestScore) {
+      bestScore = score;
+      best = turned;
+    }
+    turned = applyPerm(turned, MOVES.U);
+  }
+  return best;
 }
 
 /** The 9 facelets of one face, row-major. */
