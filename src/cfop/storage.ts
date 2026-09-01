@@ -6,7 +6,7 @@ export function loadCfopStore(): CfopStore {
   try {
     const raw = localStorage.getItem(CFOP_KEY);
     if (!raw) return emptyCfopStore();
-    return normalize(JSON.parse(raw));
+    return normalizeCfopStore(JSON.parse(raw));
   } catch {
     return emptyCfopStore();
   }
@@ -24,7 +24,7 @@ export function saveCfopStore(store: CfopStore): void {
  * no record at all, which is why an unknown id here is harmless — the case list
  * is the source of truth for what exists, and this is only the overlay.
  */
-function normalize(input: unknown): CfopStore {
+export function normalizeCfopStore(input: unknown): CfopStore {
   if (!input || typeof input !== 'object') return emptyCfopStore();
 
   const raw = input as { schemaVersion?: number; cases?: unknown };

@@ -7,6 +7,14 @@ export type CaseSet = 'pll' | 'oll' | 'f2l';
  */
 export type Confidence = 0 | 1 | 2 | 3;
 
+/** The chip labels, same words as the pair library's for the same reason. */
+export const CONFIDENCE_LABELS: Record<Confidence, string> = {
+  0: 'unset',
+  1: 'weak',
+  2: 'ok',
+  3: 'solid',
+};
+
 /** A case as shipped: the fixed facts about it. Never written to storage. */
 export interface AlgCase {
   id: string;        // 'pll-t'

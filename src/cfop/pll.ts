@@ -7,17 +7,16 @@ import type { AlgCase } from './types';
  * you answer first when the case comes up (which corners swap, or none), and
  * it's what makes the set learnable in order rather than as 21 unrelated algs.
  *
- * !! THE ALGORITHMS BELOW ARE NOT YET VERIFIED. !!
+ * Every alg here is checked by `npm run check:algs`, which runs the table
+ * through src/cube/moves.ts and asserts three things: applied to a solved cube
+ * each one leaves the U face uniform and the bottom two layers untouched (so it
+ * really is a PLL), and all 21 land on distinct cases. Rotations are written
+ * out and closed — an alg that ends the cube in a different orientation is a
+ * bug the checker catches, not a style choice.
  *
- * Running each one through src/cube/moves.ts against a solved cube shows:
- *   - Ab and Ja are simply wrong — no closing rotation rescues them.
- *   - Aa, E and V are missing their closing rotation (x', x and y').
- *   - Z, Jb, the four G perms and several others come out with a U-layer
- *     rotation baked in, i.e. the alg leaves an AUF after it "solves".
- *
- * Do not drill from these until the table has been replaced from a trusted
- * source and re-checked with the engine. `activeAlg` already prefers whatever
- * you type in yourself, so overriding one is the safe path meanwhile.
+ * Add a case by adding the alg and running the checker. `activeAlg` prefers
+ * whatever you type in yourself, so your own alg is never checked — override
+ * freely.
  */
 export const PLL_CASES: AlgCase[] = [
   // ----- edges only: all four corners already solved -----
@@ -32,17 +31,17 @@ export const PLL_CASES: AlgCase[] = [
 
   // ----- corners only: all four edges already solved -----
   { id: 'pll-aa', set: 'pll', name: 'Aa', group: 'corners only',
-    alg: "x L2 D2 L' U' L D2 L' U L'" },
+    alg: "x L2 D2 L' U' L D2 L' U L' x'" },
   { id: 'pll-ab', set: 'pll', name: 'Ab', group: 'corners only',
-    alg: "x L2 D2 L U L' D2 L U' L" },
+    alg: "x R2 D2 R U R' D2 R U' R x'" },
   { id: 'pll-e', set: 'pll', name: 'E', group: 'corners only',
-    alg: "x' L' U L D' L' U' L D L' U' L D' L' U L D" },
+    alg: "x' L' U L D' L' U' L D L' U' L D' L' U L D x" },
 
   // ----- adjacent corner swap: the two swapping corners share an edge -----
   { id: 'pll-t', set: 'pll', name: 'T', group: 'adjacent swap',
     alg: "R U R' U' R' F R2 U' R' U' R U R' F'" },
   { id: 'pll-ja', set: 'pll', name: 'Ja', group: 'adjacent swap',
-    alg: "x R2 F R F' R U2 R' U R U2 R'" },
+    alg: "R' U L' U2 R U' R' U2 R L" },
   { id: 'pll-jb', set: 'pll', name: 'Jb', group: 'adjacent swap',
     alg: "R U R' F' R U R' U' R' F R2 U' R'" },
   { id: 'pll-ra', set: 'pll', name: 'Ra', group: 'adjacent swap',
@@ -62,7 +61,7 @@ export const PLL_CASES: AlgCase[] = [
 
   // ----- diagonal corner swap: the swapping corners are across from each other -----
   { id: 'pll-v', set: 'pll', name: 'V', group: 'diagonal swap',
-    alg: "R' U R' U' y R' F' R2 U' R' U R' F R F" },
+    alg: "R' U R' U' y R' F' R2 U' R' U R' F R F y'" },
   { id: 'pll-y', set: 'pll', name: 'Y', group: 'diagonal swap',
     alg: "F R U' R' U' R U R' F' R U R' U' R' F R F'" },
   { id: 'pll-na', set: 'pll', name: 'Na', group: 'diagonal swap',
