@@ -5,8 +5,8 @@ import { randomScramble } from './scramble'
 import ScrambleBanner from './ScrambleBanner'
 import { loadTimerStore, saveTimerStore } from './storage'
 import { loadTimerSettings } from './settings'
-import { activeSession, effectiveMs, newSolve } from './types'
 import { average, best, mean } from './stats'
+import {activeSession, effectiveMs, newSolve,} from './types'
 
 export default function TimerPanel() {
   const [store, setStore] = useState(loadTimerStore)

@@ -1,0 +1,45 @@
+import { formatTime } from './format'
+import { average, best, bestAverage, mean } from './stats'
+import { effectiveMs, type Solve } from './types'
+
+interface StatsPanelProps {
+    solves: Solve[]
+    decimals: 2 | 3
+}
+
+export default function StatsPanel({ solves, decimals }: StatsPanelProps) {
+    const latest = solves.length > 0 ? effectiveMs(solves[solves.length-1]) : NaN
+
+    const rows = [
+    { label: 'single', current: latest, record: best(solves) },
+    { label: 'ao5', current: average(solves, 5), record: bestAverage(solves, 5) },
+    { label: 'ao12', current: average(solves, 12), record: bestAverage(solves, 12) },        
+    ]
+  return (
+    <>
+      <table className="stats">
+        <thead>
+          <tr>
+            <th />
+            <th>current</th>
+            <th>best</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label}>
+              <th scope="row">{row.label}</th>
+              <td>{formatTime(row.current, decimals)}</td>
+              <td>{formatTime(row.record, decimals)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <p className="stats-foot">
+        <span>{solves.length} solves</span>
+        <span>mean {formatTime(mean(solves), decimals)}</span>
+      </p>
+    </>
+  )
+}
