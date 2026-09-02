@@ -101,13 +101,38 @@ export function randomNxN(size: number, length: number, options: NxNOptions = {}
 }
 
 /**
- * WCA blindfolded scrambles end with a random cube rotation, so you can't assume
- * white on top and have to work out your orientation as part of the solve.
- * Six choices about x/z times four about y is all 24 orientations, once each.
+ * WCA blindfolded scrambles end held at a random angle, so you can't assume
+ * white on top and have to work your orientation out as part of the solve.
+ *
+ * Written as wide moves rather than as an `x y'` instruction to hold the cube
+ * differently, which is what cstimer and TNoodle emit. Two reasons it's the
+ * better form: it's part of the scramble, so it survives being copied, pasted
+ * and read back by anything else; and a wide turn is something you *do* to the
+ * cube, so the preview can draw the position you will actually be holding
+ * instead of a picture you have to mentally rotate.
+ *
+ * Six choices of the first times four of the second covers all 24 orientations
+ * once each. Two-layer wide turns are legal on every cube from 2x2 up, so the
+ * one table serves 3BLD, 4BLD, 5BLD and multi-blind alike.
  */
-const ORIENT_X = ['', 'x', 'x2', "x'", 'z', "z'"] as const;
-const ORIENT_Y = ['', 'y', 'y2', "y'"] as const;
+const ORIENT_FIRST = ['', 'Rw', 'Rw2', "Rw'", 'Fw', "Fw'"] as const;
+const ORIENT_SECOND = ['', 'Uw', 'Uw2', "Uw'"] as const;
 
 export function randomOrientation(): string[] {
-  return [pick(ORIENT_X), pick(ORIENT_Y)].filter((move) => move !== '');
+  return [pick(ORIENT_FIRST), pick(ORIENT_SECOND)].filter((move) => move !== '');
+}
+
+/**
+ * The face the first of these tokens turns, or null if there are none.
+ *
+ * The orientation suffix is generated *before* the scramble it follows, so the
+ * scramble can be told what it has to join onto — `randomNxN`'s `before` option,
+ * the same one FMC uses for its `R' U' F` tail. Filtering the orientation to fit
+ * the scramble instead would be the easier way round and the wrong one: it would
+ * quietly stop the 24 orientations being equally likely, and which way up the
+ * cube lands is part of a blindfolded solve rather than decoration on it.
+ */
+export function leadingFace(tokens: string[]): Face | null {
+  const match = /[UDLRFB]/.exec(tokens[0] ?? '');
+  return match ? (match[0] as Face) : null;
 }
