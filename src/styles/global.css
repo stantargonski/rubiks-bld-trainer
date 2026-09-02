@@ -1624,6 +1624,10 @@ textarea,
   border-radius: 50%;
   background: var(--go);
 }
+/* Holds the SVG and the readout that floats over it. */
+.chart-wrap {
+  position: relative;
+}
 .chart {
   display: block;
   width: 100%;
@@ -1639,22 +1643,25 @@ textarea,
   font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
+/* Thicker and less transparent than they were: the lines are the figure and
+   the singles are the scatter they are drawn through, and the two used to be
+   competing for the same weight. */
 .chart .line {
-  stroke-width: 2;
+  stroke-width: 2.6;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 .chart .line.ao5 { stroke: var(--accent); }
-.chart .line.ao12 { stroke: var(--text-dim); opacity: 0.75; }
+.chart .line.ao12 { stroke: var(--text-dim); opacity: 0.9; }
 /* Furthest back of the three: a hundred solves move slowly, so this is the
    line you read the shape of rather than the value off. */
 .chart .line.ao100 {
   stroke: color-mix(in srgb, var(--accent) 55%, var(--text-dim));
-  opacity: 0.6;
+  opacity: 0.85;
 }
 .chart .point {
   fill: var(--text);
-  opacity: 0.55;
+  opacity: 0.4;
 }
 .chart .point.pb {
   fill: var(--go);
@@ -1665,6 +1672,73 @@ textarea,
 }
 .chart .bar {
   fill: var(--fill-2);
+}
+/* The solve under the pointer, and the line dropped through it. */
+.chart .point.held {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 1;
+}
+.chart-guide {
+  stroke: var(--accent);
+  stroke-width: 1;
+  opacity: 0.35;
+}
+/* Transparent, over the whole plot, and the last thing drawn: it takes the
+   pointer from every dot under it, which is what lets the readout follow a
+   sweep instead of blinking between targets. */
+.chart-hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+.chart-tip {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, calc(-100% - 14px));
+  min-width: 150px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  /* It follows the pointer; it must never be under it. */
+  pointer-events: none;
+}
+.chart-tip b {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-dim);
+  font-weight: 800;
+}
+.chart-tip b span {
+  color: var(--text);
+  font-size: calc(15px * var(--font-scale));
+}
+.chart-tip i {
+  display: block;
+  font-style: normal;
+  opacity: 0.75;
+}
+.chart-tip dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 12px;
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.chart-tip dt {
+  font-weight: 700;
+}
+.chart-tip dd {
+  margin: 0;
+  color: var(--text);
+  text-align: right;
 }
 .chart-empty {
   margin: 0;
@@ -2369,7 +2443,9 @@ textarea,
   /* Labelled rows are Monday, Wednesday and Friday — every other row, so the
      gap spans two 16px rows less the height of the label itself. */
   gap: 20px;
-  padding-top: 1px;
+  /* Clears the row of month labels above the grid, so the weekday labels still
+     line up with the rows they name. */
+  padding-top: 19px;
   color: var(--text-dim);
   font-size: 12px;
   line-height: 12px;
@@ -2378,11 +2454,27 @@ textarea,
 .activity-grid {
   display: flex;
   gap: 3px;
+  padding-top: 18px;
 }
 .activity-week {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 3px;
+}
+/* A visible break between months, so a year reads as twelve stretches rather
+   than as one undifferentiated strip. */
+.activity-week.month-start {
+  margin-left: 9px;
+}
+.activity-month {
+  position: absolute;
+  top: -18px;
+  left: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 12px;
+  letter-spacing: 0.04em;
 }
 .activity-cell {
   width: 13px;

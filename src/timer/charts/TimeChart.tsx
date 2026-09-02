@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, type PointerEvent } from 'react'
 import { formatTime } from '../format'
 import { rollingAverages } from '../stats'
 import { effectiveMs, type Solve } from '../types'
@@ -14,6 +14,22 @@ import { effectiveMs, type Solve } from '../types'
 const WIDTH = 720
 const HEIGHT = 240
 const PAD = { top: 14, right: 12, bottom: 22, left: 52 }
+
+/**
+ * The x axis counts in hundreds of solves, coarsening only when a hundred would
+ * crowd it.
+ *
+ * Deliberately not `niceStep` below: that one rounds an arbitrary span to
+ * whatever reads well, and here the numbers people actually think in are round
+ * hundreds — "my first five hundred solves", never "my first five hundred and
+ * twelve".
+ */
+const X_STEPS = [100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000]
+const MAX_X_LABELS = 8
+
+function xStep(count: number): number {
+  return X_STEPS.find((step) => count / step <= MAX_X_LABELS) ?? X_STEPS[X_STEPS.length - 1]
+}
 
 interface TimeChartProps {
   solves: Solve[]
@@ -40,6 +56,9 @@ export default function TimeChart({ solves, decimals }: TimeChartProps) {
     () => [5, 12, 100].map((size) => rollingAverages(solves, size)),
     [solves],
   )
+
+  /** Which solve the pointer is nearest, or null when it is off the chart. */
+  const [hover, setHover] = useState<number | null>(null)
 
   const times = solves.map(effectiveMs)
   const finite = times.filter((value) => Number.isFinite(value))
@@ -90,53 +109,144 @@ export default function TimeChart({ solves, decimals }: TimeChartProps) {
     isPb.push(better)
   }
 
+  // Every hundredth solve. The count itself stands in when there aren't a
+  // hundred yet, so a short session's axis still says how long it is.
+  const marks: number[] = [1]
+  const every = xStep(solves.length)
+  for (let mark = every; mark <= solves.length; mark += every) marks.push(mark)
+  if (marks.length === 1 && solves.length > 1) marks.push(solves.length)
+
+  /**
+   * The solve nearest the pointer, from where the pointer is across the plot.
+   *
+   * Nearest-index rather than hit-testing the dots: a 2.4px circle is something
+   * you have to aim at, and this is a chart you read by sweeping across. The
+   * whole vertical strip around a point is live, so the readout keeps up with
+   * the pointer instead of blinking in and out of existence between dots.
+   */
+  function track(event: PointerEvent<SVGRectElement>) {
+    const box = event.currentTarget.getBoundingClientRect()
+    if (box.width === 0) return
+
+    const ratio = (event.clientX - box.left) / box.width
+    const index = Math.round(ratio * (solves.length - 1))
+    setHover(Math.min(solves.length - 1, Math.max(0, index)))
+  }
+
+  const at = hover === null ? null : {
+    index: hover,
+    time: times[hover],
+    when: new Date(solves[hover].id),
+    // Already computed for the lines; the readout is only reading them off.
+    ao5: ao5[hover],
+    ao12: ao12[hover],
+    ao100: ao100[hover],
+  }
+
   return (
-    <svg className="chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="solve times">
-      {lines.map((value) => (
-        <g key={value}>
-          <line className="grid" x1={PAD.left} x2={WIDTH - PAD.right} y1={y(value)} y2={y(value)} />
-          <text className="axis" x={PAD.left - 8} y={y(value) + 3.5} textAnchor="end">
-            {formatTime(value, decimals)}
-          </text>
-        </g>
-      ))}
+    <div className="chart-wrap">
+      <svg className="chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="solve times">
+        {lines.map((value) => (
+          <g key={value}>
+            <line className="grid" x1={PAD.left} x2={WIDTH - PAD.right} y1={y(value)} y2={y(value)} />
+            <text className="axis" x={PAD.left - 8} y={y(value) + 3.5} textAnchor="end">
+              {formatTime(value, decimals)}
+            </text>
+          </g>
+        ))}
 
-      <path className="line ao100" d={path(ao100)} fill="none" />
-      <path className="line ao12" d={path(ao12)} fill="none" />
-      <path className="line ao5" d={path(ao5)} fill="none" />
+        {at && (
+          <line
+            className="chart-guide"
+            x1={x(at.index)}
+            x2={x(at.index)}
+            y1={PAD.top}
+            y2={HEIGHT - PAD.bottom}
+          />
+        )}
 
-      {times.map((value, index) => {
-        // DNFs have no height of their own, so they sit on the ceiling with a
-        // shape of their own rather than dragging the scale up to infinity.
-        const dnf = !Number.isFinite(value)
-        const label = `#${index + 1} — ${formatTime(value, decimals)}`
+        <path className="line ao100" d={path(ao100)} fill="none" />
+        <path className="line ao12" d={path(ao12)} fill="none" />
+        <path className="line ao5" d={path(ao5)} fill="none" />
 
-        return dnf ? (
-          <g key={solves[index].id}>
+        {times.map((value, index) => {
+          // DNFs have no height of their own, so they sit on the ceiling with a
+          // shape of their own rather than dragging the scale up to infinity.
+          const dnf = !Number.isFinite(value)
+
+          return dnf ? (
             <path
+              key={solves[index].id}
               className="point dnf"
               d={`M${x(index) - 3.5} ${PAD.top - 6} L${x(index) + 3.5} ${PAD.top - 6}
                   L${x(index)} ${PAD.top + 1} Z`}
             />
-            <title>{label}</title>
-          </g>
-        ) : (
-          <circle
-            key={solves[index].id}
-            className={isPb[index] ? 'point pb' : 'point'}
-            cx={x(index)}
-            cy={y(value)}
-            r={isPb[index] ? 3.6 : 2.4}
-          >
-            <title>{label}</title>
-          </circle>
-        )
-      })}
+          ) : (
+            <circle
+              key={solves[index].id}
+              className={isPb[index] ? 'point pb' : 'point'}
+              cx={x(index)}
+              cy={y(value)}
+              r={isPb[index] ? 3.6 : 2.4}
+            />
+          )
+        })}
 
-      <text className="axis" x={PAD.left} y={HEIGHT - 6}>1</text>
-      <text className="axis" x={WIDTH - PAD.right} y={HEIGHT - 6} textAnchor="end">
-        {solves.length}
-      </text>
-    </svg>
+        {at && (
+          <circle
+            className="point held"
+            cx={x(at.index)}
+            cy={Number.isFinite(at.time) ? y(at.time) : PAD.top - 3}
+            r={5}
+          />
+        )}
+
+        {marks.map((mark) => (
+          <text
+            key={mark}
+            className="axis"
+            x={x(mark - 1)}
+            y={HEIGHT - 6}
+            textAnchor={mark === 1 ? 'start' : mark === solves.length ? 'end' : 'middle'}
+          >
+            {mark}
+          </text>
+        ))}
+
+        {/* Last, so it takes the pointer from everything under it — otherwise
+            each dot would swallow its own events and the sweep would stutter. */}
+        <rect
+          className="chart-hit"
+          x={PAD.left}
+          y={PAD.top}
+          width={plotWidth}
+          height={plotHeight}
+          onPointerMove={track}
+          onPointerLeave={() => setHover(null)}
+        />
+      </svg>
+
+      {at && (
+        <div
+          className="chart-tip"
+          style={{
+            // Clamped off both edges, so the box never hangs outside the card.
+            left: `${Math.min(88, Math.max(12, (x(at.index) / WIDTH) * 100))}%`,
+            top: `${((Number.isFinite(at.time) ? y(at.time) : PAD.top) / HEIGHT) * 100}%`,
+          }}
+        >
+          <b>
+            #{at.index + 1}
+            <span>{formatTime(at.time, decimals)}</span>
+          </b>
+          <i>{at.when.toLocaleDateString()} {at.when.toLocaleTimeString()}</i>
+          <dl>
+            <dt>ao5</dt><dd>{formatTime(at.ao5, decimals)}</dd>
+            <dt>ao12</dt><dd>{formatTime(at.ao12, decimals)}</dd>
+            <dt>ao100</dt><dd>{formatTime(at.ao100, decimals)}</dd>
+          </dl>
+        </div>
+      )}
+    </div>
   )
 }

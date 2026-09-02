@@ -16,6 +16,17 @@ import { DAY, type Range } from './ranges'
 
 const WEEKDAYS = ['monday', 'wednesday', 'friday'];
 
+const MONTHS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+];
+
+/** One column of the grid: a week of days, and the month it opens if it opens one. */
+interface Week {
+  days: { key: string; count: number; date: Date }[];
+  /** The month name to print above this column, or null to print nothing. */
+  month: string | null;
+}
+
 interface ActivityHeatmapProps {
   solves: Solve[]
   range: Range
@@ -50,12 +61,14 @@ export default function ActivityHeatmap({ solves, range, now }: ActivityHeatmapP
     const weekday = (start.getDay() + 6) % 7;          // 0 = Monday
     start.setDate(start.getDate() - weekday);
 
-    const columns: { key: string; count: number; date: Date }[][] = [];
+    const columns: Week[] = [];
     let running = 0;
     let peak = 0;
+    /** The month the previous column opened in, so a change of it is a boundary. */
+    let lastMonth = -1;
 
     for (let cursor = new Date(start); cursor <= today;) {
-      const week: { key: string; count: number; date: Date }[] = [];
+      const days: Week['days'] = [];
 
       for (let day = 0; day < 7; day += 1) {
         const date = new Date(cursor);
@@ -63,14 +76,21 @@ export default function ActivityHeatmap({ solves, range, now }: ActivityHeatmapP
         // Days after today are drawn as gaps, not as zero-activity days.
         const count = date > today ? -1 : (counts.get(key) ?? 0);
 
-        week.push({ key, count, date });
+        days.push({ key, count, date });
         if (count > 0) {
           running += count;
           peak = Math.max(peak, count);
         }
         cursor.setDate(cursor.getDate() + 1);
       }
-      columns.push(week);
+
+      // Read off the Monday the column starts on: a month that begins midweek
+      // belongs to the column that first shows a day of it, which is this one.
+      // The first column is never a boundary — there is nothing before it to be
+      // a boundary from, and a gap at the left edge reads as a missing week.
+      const month = days[0].date.getMonth();
+      columns.push({ days, month: month === lastMonth ? null : MONTHS[month] });
+      lastMonth = month;
     }
 
     return { weeks: columns, total: running, busiest: peak };
@@ -99,8 +119,19 @@ export default function ActivityHeatmap({ solves, range, now }: ActivityHeatmapP
 
         <div className="activity-grid">
           {weeks.map((week, index) => (
-            <div className="activity-week" key={index}>
-              {week.map((day) => (
+            <div
+              // The gap goes before every month but the first: at the left edge
+              // it would read as a missing week rather than as a divider.
+              className={week.month && index > 0 ? 'activity-week month-start' : 'activity-week'}
+              key={week.days[0].key}
+            >
+              {/* Inside the column and positioned over it, so the label is
+                  aligned to its month by construction — a separate row of
+                  labels would have to re-derive every column's width and would
+                  drift the moment one of them changed. */}
+              {week.month && <span className="activity-month">{week.month}</span>}
+
+              {week.days.map((day) => (
                 <i
                   key={day.key}
                   className={day.count < 0 ? 'activity-cell gap' : `activity-cell ${level(day.count)}`}
