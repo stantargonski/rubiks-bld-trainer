@@ -21,8 +21,16 @@ export interface TimerSettings {
   showSolveList: boolean;
   showStats: boolean;
   showAverages: boolean;
+  /** The gap to the solve before, beside the clock — (-2.43) in green, (+1.07) in red. */
+  showDelta: boolean;
   showCubeNet: boolean;
   hideUiWhileRunning: boolean;
+  /** Drop the panel fill and border behind the scramble bar / the rail, so each
+      sits straight on the background instead of in a box of its own. */
+  flatScramble: boolean;
+  flatSidebar: boolean;
+  /** Scramble in a monospaced face, so the moves line up in columns. */
+  monoScramble: boolean;
   /** The scramble preview panel's size, as the user last dragged it. */
   previewWidth: number;
   previewHeight: number;
@@ -48,8 +56,12 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   showSolveList: true,
   showStats: true,
   showAverages: true,
+  showDelta: true,
   showCubeNet: true,
   hideUiWhileRunning: true,
+  flatScramble: false,
+  flatSidebar: false,
+  monoScramble: false,
   previewWidth: 320,
   previewHeight: 268,
   previewRight: 16,
@@ -120,8 +132,12 @@ export function readTimerSettings(input: unknown): TimerSettings {
       showSolveList: bool(parsed.showSolveList, true),
       showStats: bool(parsed.showStats, true),
       showAverages: bool(parsed.showAverages, true),
+      showDelta: bool(parsed.showDelta, true),
       showCubeNet: bool(parsed.showCubeNet, true),
       hideUiWhileRunning: bool(parsed.hideUiWhileRunning, true),
+      flatScramble: bool(parsed.flatScramble, false),
+      flatSidebar: bool(parsed.flatSidebar, false),
+      monoScramble: bool(parsed.monoScramble, false),
       previewWidth: clamp(
         parsed.previewWidth, PREVIEW_MIN, PREVIEW_MAX, DEFAULT_TIMER_SETTINGS.previewWidth,
       ),

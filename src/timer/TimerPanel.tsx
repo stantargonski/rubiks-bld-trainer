@@ -198,6 +198,16 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
    */
   const restingMs = solves.length > 0 ? effectiveMs(solves[solves.length - 1]) : 0
 
+  /**
+   * How the last solve compared with the one before it. NaN whenever there is
+   * nothing to compare — fewer than two solves, or a DNF at either end, where
+   * the gap is not a number of seconds and pretending otherwise would print an
+   * Infinity beside the clock.
+   */
+  const delta = solves.length >= 2
+    ? effectiveMs(solves[solves.length - 1]) - effectiveMs(solves[solves.length - 2])
+    : NaN
+
   // Both of these are pure functions of the timer's state, over in ./display.ts
   // where they can be checked without a browser.
   const face = clockText({
@@ -213,7 +223,7 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
       {/* The rail carries the tools now, so it stands as long as anything in
           it does rather than only as long as the solve list. */}
       {(settings.showSolveList || settings.showStats) && (
-        <aside className="timer-rail">
+        <aside className={settings.flatSidebar ? 'timer-rail flat' : 'timer-rail'}>
           {settings.showStats && (
             <div className="rail-stats">
               <StatsPanel
@@ -280,6 +290,8 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
             onLast={() => setIndex(index - 1)}
             onNext={goNext}
             action={settings.scrambleClick}
+            flat={settings.flatScramble}
+            mono={settings.monoScramble}
           >
             <EventPicker value={session.event} onChange={setEvent} />
             {event.scramble.kind === 'mbf' && (
@@ -311,7 +323,18 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
             on the window rather than on the space the rail leaves. */}
         <div className="timer-stage">
           <div className="stage-clock">
-            <div className={`clock ${clockPhase(phase, inspectMs)}`}>{face}</div>
+            {/* The delta hangs off the clock rather than sitting beside it in
+                flow: it is out of the normal flow entirely, so the clock's
+                centre is the window's centre whether or not there is a gap to
+                show. */}
+            <div className="clock-line">
+              <div className={`clock ${clockPhase(phase, inspectMs)}`}>{face}</div>
+              {settings.showDelta && !timing && Number.isFinite(delta) && (
+                <span className={delta < 0 ? 'clock-delta good' : 'clock-delta bad'}>
+                  ({delta < 0 ? '-' : '+'}{formatTime(Math.abs(delta), settings.decimals)})
+                </span>
+              )}
+            </div>
 
             {/* memoMs is only ever non-null on a split solve, so no mode check. */}
             {memoMs !== null && !timing && (

@@ -51,11 +51,21 @@ function Choice<T extends string>({ options, value, onChange }: {
   )
 }
 
+/**
+ * One button that says where the setting stands and flips it.
+ *
+ * It used to be two, on and off, with the current one lit. That is the right
+ * shape for a choice between things — which is what `Choice` above is for — but
+ * a boolean has no second option worth drawing: half the control was always
+ * dead, and reading it meant working out which half was the answer rather than
+ * just reading the answer.
+ */
 function Toggle({ value, onChange }: { value: boolean; onChange: (next: boolean) => void }) {
   return (
-    <div className="choice">
-      <button type="button" aria-pressed={value} onClick={() => onChange(true)}>on</button>
-      <button type="button" aria-pressed={!value} onClick={() => onChange(false)}>off</button>
+    <div className="choice toggle">
+      <button type="button" aria-pressed={value} onClick={() => onChange(!value)}>
+        {value ? 'on' : 'off'}
+      </button>
     </div>
   )
 }
@@ -161,6 +171,12 @@ export default function SettingsPage({
         <Row label="ao5 / ao12 under the clock">
           <Toggle value={timer.showAverages} onChange={(v) => setTimer('showAverages', v)} />
         </Row>
+        <Row
+          label="difference from the last solve"
+          description="A smaller (-2.43) beside the clock, green when you went faster. The clock itself stays centred."
+        >
+          <Toggle value={timer.showDelta} onChange={(v) => setTimer('showDelta', v)} />
+        </Row>
         <Row label="scramble preview" description="The scramble drawn as a cube. Drag its title bar to move it, its top-left corner to resize.">
           <Toggle value={timer.showCubeNet} onChange={(v) => setTimer('showCubeNet', v)} />
         </Row>
@@ -194,6 +210,25 @@ export default function SettingsPage({
           description="15 second inpection, with automatic penalty."
         >
           <Toggle value={timer.inspection} onChange={(v) => setTimer('inspection', v)} />
+        </Row>
+
+        <Row
+          label="flat scramble bar"
+          description="Drops the panel behind the scramble so it sits straight on the background."
+        >
+          <Toggle value={timer.flatScramble} onChange={(v) => setTimer('flatScramble', v)} />
+        </Row>
+        <Row
+          label="flat sidebar"
+          description="The same for the rail down the left."
+        >
+          <Toggle value={timer.flatSidebar} onChange={(v) => setTimer('flatSidebar', v)} />
+        </Row>
+        <Row
+          label="monospaced scramble"
+          description="Every move the same width, so the scramble reads as columns."
+        >
+          <Toggle value={timer.monoScramble} onChange={(v) => setTimer('monoScramble', v)} />
         </Row>
 
         <Row label="action when clicking scramble">

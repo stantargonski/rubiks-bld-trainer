@@ -1106,6 +1106,11 @@ textarea,
 .scramble-text.copied {
   color: var(--text-dim);
 }
+/* Every move the same width, so the scramble reads as columns rather than as a
+   paragraph. */
+.scramble-text.mono {
+  font-family: ui-monospace, 'JetBrains Mono', 'Roboto Mono', monospace;
+}
 .scramble-text[data-inert='true'] {
   cursor: default;
 }
@@ -1177,6 +1182,30 @@ textarea,
   justify-content: center;
   padding: 10px 20px 0;
 }
+/* The clock, and whatever hangs off it. Positioned so the delta can be taken
+   out of flow — the clock has to centre on the window whether or not there is a
+   gap to show beside it, and a sibling in flow would shift it by half its own
+   width every time one appeared. */
+.clock-line {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+/* Small, and attached to the foot of the number rather than to its middle: it
+   is a footnote on the time, not a second reading. */
+.clock-delta {
+  position: absolute;
+  left: 100%;
+  bottom: 0.18em;
+  margin-left: 10px;
+  font-size: calc(22px * var(--font-scale));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.clock-delta.good { color: var(--go); }
+.clock-delta.bad { color: var(--holding); }
+
 .clock {
   font-family: var(--font-timer);
   font-variant-numeric: tabular-nums;
@@ -1226,6 +1255,16 @@ textarea,
   color: var(--text-dim);
   font-size: calc(14px * var(--font-scale));
   letter-spacing: 0.02em;
+}
+
+/* Straight on the background instead of in a box of its own. The border stays
+   in the layout as a transparent line so nothing shifts by a pixel when it is
+   switched on. */
+.timer-rail.flat,
+.scramble-bar.flat {
+  background: none;
+  backdrop-filter: none;
+  border-color: transparent;
 }
 
 /* ----- competition round ----- */
@@ -1431,6 +1470,12 @@ textarea,
 
 
 /* Each chip is painted in the theme it selects — the swatch *is* the preview. */
+/* A fixed width, so flipping the setting doesn't resize the control under the
+   pointer that just flipped it. */
+.choice.toggle button {
+  min-width: 62px;
+}
+
 .theme-grid {
   display: flex;
   flex-wrap: wrap;

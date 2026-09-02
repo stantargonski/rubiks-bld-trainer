@@ -19,7 +19,7 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
       <div className="timer-preview-scale">
         <div className="timer-frame">
           {(settings.showSolveList || settings.showStats) && (
-            <aside className="timer-rail">
+            <aside className={settings.flatSidebar ? 'timer-rail flat' : 'timer-rail'}>
               {settings.showStats && (
                 <div className="rail-stats">
                   <table className="stats">
@@ -60,7 +60,7 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
 
           <div className="timer-main">
             {settings.showScramble && (
-              <div className="scramble-bar">
+              <div className={settings.flatScramble ? 'scramble-bar flat' : 'scramble-bar'}>
                 <div className="scramble-head">
                   <span className="event-picker">3x3</span>
                   <span className="scramble-nav">
@@ -69,7 +69,7 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
                   </span>
                 </div>
                 <div className="scramble-body">
-                  <span className="scramble-text">
+                  <span className={settings.monoScramble ? 'scramble-text mono' : 'scramble-text'}>
                     {"D2 F' U R2 B L' F2 U'".split(' ').map((move, index) => (
                       <span key={index}>{move}</span>
                     ))}
@@ -80,7 +80,10 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
 
             <div className="timer-stage">
               <div className="stage-clock">
-                <div className="clock">{clock}</div>
+                <div className="clock-line">
+                  <div className="clock">{clock}</div>
+                  {settings.showDelta && <span className="clock-delta good">(-1.28)</span>}
+                </div>
                 {settings.showAverages && (
                   <div className="averages">
                     <span>ao5 <b>12.88</b></span>

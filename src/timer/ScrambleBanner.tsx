@@ -10,12 +10,16 @@ interface ScrambleBannerProps {
   onNext: () => void
   /** What a click on the scramble itself does. */
   action: ScrambleClick
+  /** Sit straight on the background rather than in a panel of its own. */
+  flat: boolean
+  /** Monospaced, so the moves line up in columns. */
+  mono: boolean
   /** The event picker, rendered above the scramble. */
   children?: ReactNode
 }
 
 export default function ScrambleBanner({
-  scramble, canGoBack, onLast, onNext, action, children,
+  scramble, canGoBack, onLast, onNext, action, flat, mono, children,
 }: ScrambleBannerProps) {
   const [copied, setCopied] = useState(false)
 
@@ -44,7 +48,7 @@ export default function ScrambleBanner({
   }
 
   return (
-    <div className="scramble-bar">
+    <div className={flat ? 'scramble-bar flat' : 'scramble-bar'}>
       {/* The nav sits with the picker rather than beside the scramble: both
           decide what you are about to solve, and neither is the scramble. */}
       <div className="scramble-head">
@@ -58,7 +62,7 @@ export default function ScrambleBanner({
       <div className="scramble-body">
         <button
           type="button"
-          className={copied ? 'scramble-text copied' : 'scramble-text'}
+          className={`scramble-text${copied ? ' copied' : ''}${mono ? ' mono' : ''}`}
           title={title}
           // A click target that does nothing shouldn't look like a click target.
           data-inert={action === 'none' ? 'true' : undefined}
