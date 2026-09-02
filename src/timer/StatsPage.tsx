@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { formatTime } from './format'
 import { EVENTS, eventOf, type EventId } from './events'
 import {
-  ao5TrendPerHour, average, best, bestAverage, mean, secondsSpent, totalTime,
+  ao5TrendPerHour, average, best, bestAverage, durationText, mean, totalTime,
 } from './stats'
 import { activeSession, type Solve, type TimerStore } from './types'
 import TimeChart from './charts/TimeChart'
@@ -39,31 +39,42 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
 
   const session = store.sessions.find((item) => item.id === sessionId) ?? activeSession(store)
   const event = eventOf(session.event)
-  const everySolve = store.sessions.flatMap((item) => item.solves)
+  const everySolve = useMemo(() => store.sessions.flatMap((item) => item.solves), [store])
+
+  /** Every solve there is, filed by the event it was actually timed under. */
+  const byEvent = useMemo(() => {
+    const map = new Map<EventId, Solve[]>();
+    for (const solve of everySolve) {
+      const list = map.get(solve.event);
+      if (list) list.push(solve);
+      else map.set(solve.event, [solve]);
+    }
+    return map;
+  }, [everySolve]);
 
   /** Which events have ever been practised, in the catalogue's order. */
   const practised = useMemo(
-    () => EVENTS.filter((item) =>
-      store.sessions.some((s) => s.event === item.id && s.solves.length > 0)),
-    [store],
-  )
+    () => EVENTS.filter((item) => (byEvent.get(item.id)?.length ?? 0) > 0),
+    [byEvent],
+  );
 
-  /** Best single across every session of one event. */
+  /**
+   * Best single across every solve of one event, wherever it was timed.
+   *
+   * Asked of the solves rather than of the sessions holding them: `best` of an
+   * empty session is NaN, and one empty session — which is exactly what creating
+   * a session gives you — used to poison the Math.min across all of them and
+   * blank this figure for good.
+   */
   function bestFor(id: EventId): number {
-    const sessions = store.sessions.filter((item) => item.event === id)
-    if (sessions.length === 0) return NaN
-    return Math.min(...sessions.map((item) => best(item.solves)))
+    return best(byEvent.get(id) ?? [])
   }
 
   const activitySolves = useMemo<Solve[]>(() => {
     if (filter === 'all') return everySolve
-    if (filter.startsWith('e:')) {
-      return store.sessions
-        .filter((item) => item.event === filter.slice(2))
-        .flatMap((item) => item.solves)
-    }
+    if (filter.startsWith('e:')) return byEvent.get(filter.slice(2) as EventId) ?? []
     return store.sessions.find((item) => item.id === filter.slice(2))?.solves ?? []
-  }, [filter, store, everySolve])
+  }, [filter, store, everySolve, byEvent])
 
   /** The session's solves, cut down to the graph's window. */
   const windowed = useMemo(() => {
@@ -86,7 +97,7 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
         <div className="header-figures">
           <div>
             <span className="header-label">time solving</span>
-            <strong className="header-figure">{secondsSpent(totalTime(everySolve))}</strong>
+            <strong className="header-figure">{durationText(totalTime(everySolve))}</strong>
           </div>
           <div>
             <span className="header-label">sessions</span>
@@ -163,9 +174,7 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
             </thead>
             <tbody>
               {practised.map((item) => {
-                const solves = store.sessions
-                  .filter((one) => one.event === item.id)
-                  .flatMap((one) => one.solves)
+                const solves = byEvent.get(item.id) ?? []
 
                 return (
                   <tr key={item.id}>

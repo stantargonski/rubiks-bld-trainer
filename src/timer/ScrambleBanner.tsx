@@ -71,13 +71,6 @@ export default function ScrambleBanner({
         </div>
       </div>
 
-      {/* Blindfolded events end held at an angle. It's an instruction, not part
-          of the scramble, so it reads as one instead of as four more tokens. */}
-      {scramble.rotation.length > 0 && (
-        <p className="scramble-hold">
-          then hold it <b>{scramble.rotation.join(' ')}</b>
-        </p>
-      )}
     </div>
   )
 }

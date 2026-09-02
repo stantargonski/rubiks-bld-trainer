@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useTimer } from './useTimer'
 import { clockPhase, clockText } from './display'
 import { formatTime } from './format'
-import { eventOf, type EventId } from './events'
+import { eventOf, type EventId, type WcaEvent } from './events'
 import { prepare, scrambleFor, scrambleText, type Scramble } from './scramble'
 import EventPicker from './EventPicker'
+import MbldCount from './MbldCount'
 import ScrambleBanner from './ScrambleBanner'
 import ScramblePreview from './ScramblePreview'
 import SessionPicker from './SessionPicker'
@@ -53,7 +54,8 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   const solves = session.solves
   const event = eventOf(session.event)
 
-  const [scrambles, setScrambles] = useState<Scramble[]>(() => [scrambleFor(event)])
+  const options = { mbldCount: settings.mbldCount }
+  const [scrambles, setScrambles] = useState<Scramble[]>(() => [scrambleFor(event, options)])
   const [index, setIndex] = useState(0)
   const scramble = scrambles[index]
 
@@ -88,8 +90,20 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   function setEvent(id: EventId) {
     updateActive((item) => ({ ...item, event: id }))
     // A queued 4x4 scramble is meaningless on a Pyraminx. Start over.
-    setScrambles([scrambleFor(eventOf(id))])
+    restart(eventOf(id))
+  }
+
+  /** Throws away the queue and starts a fresh one for `next`. */
+  function restart(next: WcaEvent, mbldCount = settings.mbldCount) {
+    setScrambles([scrambleFor(next, { mbldCount })])
     setIndex(0)
+  }
+
+  function setMbldCount(mbldCount: number) {
+    onSettings({ ...settings, mbldCount })
+    // A queued five-cube scramble is the wrong scramble the moment you ask for
+    // eight, so the queue goes with the setting.
+    restart(event, mbldCount)
   }
 
   function createSession() {
@@ -133,13 +147,13 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
       setIndex(index + 1)
       return
     }
-    setScrambles([...scrambles, scrambleFor(event)])
+    setScrambles([...scrambles, scrambleFor(event, options)])
     setIndex(scrambles.length)
   }
 
   const { phase, ms, memoMs, inspectMs } = useTimer(
     (finished, memo, penalty) => {
-      const solve = newSolve(finished, memo, scrambleText(scramble), penalty)
+      const solve = newSolve(finished, memo, scrambleText(scramble), session.event, penalty)
       updateActive((item) => ({ ...item, solves: [...item.solves, solve] }))
       goNext()
     },
@@ -153,11 +167,22 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   const timing = phase === 'running' || phase === 'memo'
   const solving = timing && settings.hideUiWhileRunning
 
+  /**
+   * What the clock reads when it is not running.
+   *
+   * The session's own last solve rather than the hook's `ms`, which starts at
+   * zero on a fresh page load. The two agree the instant a solve ends — the
+   * solve just timed IS the session's last one — so this only changes what you
+   * see after a reload or a switch of sessions, which is exactly where a bare
+   * 0.00 was telling you nothing.
+   */
+  const restingMs = solves.length > 0 ? effectiveMs(solves[solves.length - 1]) : 0
+
   // Both of these are pure functions of the timer's state, over in ./display.ts
   // where they can be checked without a browser.
   const face = clockText({
     phase,
-    ms,
+    ms: timing ? ms : restingMs,
     inspectMs,
     decimals: settings.decimals,
     runningDisplay: settings.runningDisplay,
@@ -167,6 +192,12 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     <div className={solving ? 'timer-frame solving' : 'timer-frame'}>
       {settings.showSolveList && (
         <aside className="timer-rail">
+          {settings.showStats && (
+            <div className="rail-stats">
+              <StatsPanel solves={solves} decimals={settings.decimals} event={event} />
+            </div>
+          )}
+
           <div className="rail-head">
             <SessionPicker
               sessions={store.sessions}
@@ -187,12 +218,6 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
               onDelete={deleteSolve}
             />
           </div>
-
-          {settings.showStats && (
-            <div className="rail-stats">
-              <StatsPanel solves={solves} decimals={settings.decimals} event={event} />
-            </div>
-          )}
         </aside>
       )}
 
@@ -206,6 +231,9 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
             action={settings.scrambleClick}
           >
             <EventPicker value={session.event} onChange={setEvent} />
+            {event.scramble.kind === 'mbf' && (
+              <MbldCount value={settings.mbldCount} onChange={setMbldCount} />
+            )}
           </ScrambleBanner>
         )}
 
@@ -260,17 +288,24 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
           >
             🏁
           </button>
-          {settings.showCubeNet && (
-            <ScramblePreview
-              event={event}
-              scramble={scramble}
-              width={settings.previewWidth}
-              height={settings.previewHeight}
-              onResize={(previewWidth, previewHeight) =>
-                onSettings({ ...settings, previewWidth, previewHeight })}
-            />
-          )}
         </div>
+
+        {/* Outside the dock, because it is no longer pinned to a corner — it
+            sits wherever it was last dragged, over the whole frame. */}
+        {settings.showCubeNet && (
+          <ScramblePreview
+            event={event}
+            scramble={scramble}
+            width={settings.previewWidth}
+            height={settings.previewHeight}
+            right={settings.previewRight}
+            bottom={settings.previewBottom}
+            onResize={(previewWidth, previewHeight) =>
+              onSettings({ ...settings, previewWidth, previewHeight })}
+            onMove={(previewRight, previewBottom) =>
+              onSettings({ ...settings, previewRight, previewBottom })}
+          />
+        )}
       </div>
     </div>
   )

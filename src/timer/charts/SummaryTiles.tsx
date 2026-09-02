@@ -1,6 +1,6 @@
 import { formatTime } from '../format'
 import {
-  average, best, bestAverage, mean, meanExec, meanMemo, secondsSpent, stdev, totalTime,
+  average, best, bestAverage, durationText, mean, meanExec, meanMemo, stdev, totalTime,
 } from '../stats'
 import type { Solve } from '../types'
 import type { WcaEvent } from '../events'
@@ -27,7 +27,7 @@ export default function SummaryTiles({ solves, decimals, event }: SummaryTilesPr
   return (
     <div className="tiles">
       <Tile label="solves" value={String(solves.length)} />
-      <Tile label="time solving" value={secondsSpent(totalTime(solves))} note="seconds" />
+      <Tile label="time solving" value={durationText(totalTime(solves))} />
       <Tile label="best" value={time(best(solves))} />
       <Tile label="mean" value={time(mean(solves))} />
       <Tile

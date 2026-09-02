@@ -124,9 +124,17 @@ export function stdev(solves: Solve[]): number {
  * The ao`size` as it stood after each solve — one entry per solve, NaN for the
  * ones before there were enough. Aligned with the solves so a chart can draw it
  * straight over the singles without any index arithmetic at the call site.
+ *
+ * Only the trailing window is sliced, not the whole history to date: an average
+ * of five never looked at the sixth-most-recent solve, and slicing from zero
+ * made this quadratic in a list the solve rail now redraws on every keystroke.
  */
 export function rollingAverages(solves: Solve[], size: number): number[] {
-  return solves.map((_, index) => average(solves.slice(0, index + 1), size));
+  return solves.map((_, index) => (
+    index + 1 < size
+      ? NaN
+      : trimmedAverage(solves.slice(index + 1 - size, index + 1).map(effectiveMs))
+  ));
 }
 
 /**
@@ -152,15 +160,16 @@ export function bestAverage(solves: Solve[], size: number): number {
 }
 
 /**
- * Time spent solving, as a plain count of seconds.
+ * Time spent solving, as hh:mm:ss.
  *
- * No hours or minutes: this figure is read as "how much have I actually done",
- * and one number you can compare against last week beats a unit-juggling
- * "2h 45m" that you have to convert before it means anything.
+ * Hours are not capped at 24 and every field is zero-padded, so the figure
+ * sorts and compares as text and reads the same width whether it is ten minutes
+ * or two hundred hours.
  */
-export function secondsSpent(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '0';
-  return String(Math.round(ms / 1000));
+export function durationText(ms: number): string {
+  const total = !Number.isFinite(ms) || ms <= 0 ? 0 : Math.round(ms / 1000);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return [Math.floor(total / 3600), Math.floor(total / 60) % 60, total % 60].map(pad).join(':');
 }
 
 /** A solve's day, in the local timezone — the day you were actually solving. */

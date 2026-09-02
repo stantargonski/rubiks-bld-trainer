@@ -26,6 +26,15 @@ export interface TimerSettings {
   /** The scramble preview panel's size, as the user last dragged it. */
   previewWidth: number;
   previewHeight: number;
+  /**
+   * Where the preview sits, as a gap from the right and bottom edges of the
+   * timer. Measured from that corner rather than from the top-left because that
+   * is where it starts and where it stays put when the window is resized.
+   */
+  previewRight: number;
+  previewBottom: number;
+  /** How many cubes a multi-blind attempt is for. */
+  mbldCount: number;
 }
 
 export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
@@ -43,12 +52,22 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   hideUiWhileRunning: true,
   previewWidth: 320,
   previewHeight: 268,
+  previewRight: 16,
+  previewBottom: 16,
+  mbldCount: 3,
 };
 
 export const TIMER_SETTINGS_KEY = 'timer.settings.v1';
 
 export const PREVIEW_MIN = 200;
 export const PREVIEW_MAX = 680;
+
+/** How far off the edge the preview may be dragged. Enough stays on screen to
+    grab it again. */
+export const PREVIEW_MARGIN = -40;
+
+export const MBLD_MIN = 2;
+export const MBLD_MAX = 60;
 
 export function loadTimerSettings(): TimerSettings {
   try {
@@ -109,6 +128,11 @@ export function readTimerSettings(input: unknown): TimerSettings {
       previewHeight: clamp(
         parsed.previewHeight, PREVIEW_MIN, PREVIEW_MAX, DEFAULT_TIMER_SETTINGS.previewHeight,
       ),
+      // Clamped generously rather than to the window: this is read before there
+      // is a window to measure, and the panel re-clamps itself once mounted.
+      previewRight: clamp(parsed.previewRight, PREVIEW_MARGIN, 4000, 16),
+      previewBottom: clamp(parsed.previewBottom, PREVIEW_MARGIN, 4000, 16),
+      mbldCount: clamp(parsed.mbldCount, MBLD_MIN, MBLD_MAX, DEFAULT_TIMER_SETTINGS.mbldCount),
     };
   } catch {
     return DEFAULT_TIMER_SETTINGS;

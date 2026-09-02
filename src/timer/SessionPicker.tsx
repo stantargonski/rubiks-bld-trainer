@@ -58,7 +58,7 @@ export default function SessionPicker({
       >
         {sessions.map((session) => (
           <option key={session.id} value={session.id}>
-            {session.name} ({session.solves.length})
+            {session.name}
           </option>
         ))}
       </select>
