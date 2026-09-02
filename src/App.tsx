@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import PairGrid from './bld/letterPairs/PairGrid';
 import FillMode from './bld/letterPairs/FillMode';
-import {
-  loadStore, loadSuggestions, saveStore, saveSuggestions,
-} from './bld/letterPairs/storage';
+import { loadStore, saveStore } from './bld/letterPairs/storage';
 import { isBlankEntry, type PairEntry } from './bld/letterPairs/types';
 import { loadSettings, saveSettings, type Settings } from './settings/defaults';
 import TimerPanel from './timer/TimerPanel'
@@ -40,7 +38,6 @@ export default function App() {
   const [settings, setSettings] = useState(loadSettings);
   const [selected, setSelected] = useState<string | null>(null);
   const [filling, setFilling] = useState(false);
-  const [suggestions, setSuggestions] = useState(loadSuggestions);
   const [cases, setCases] = useState(loadCfopStore);
 
   // Timer settings live up here rather than in TimerPanel: the settings page
@@ -68,11 +65,6 @@ export default function App() {
     setAppearance(next);
     saveAppearance(next);
     applyAppearance(next);
-  }
-
-  function updateSuggestions(words: Record<string, string[]>) {
-    setSuggestions(words);
-    saveSuggestions(words);
   }
 
   useEffect(() => {
@@ -156,7 +148,6 @@ export default function App() {
           <FillMode
             store={store}
             settings={settings}
-            words={suggestions}
             onChangeEntry={saveEntry}
             onExit={() => setFilling(false)}
           />
@@ -167,8 +158,6 @@ export default function App() {
             onSettings={updateSettings}
             selected={selected}
             onSelect={setSelected}
-            suggestions={suggestions}
-            onSuggestions={updateSuggestions}
             onChangeEntry={saveEntry}
             onFill={() => setFilling(true)}
           />

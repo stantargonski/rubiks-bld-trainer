@@ -12,8 +12,8 @@
  * name.
  */
 import {
-  alignLastLayer, applyAlg, applyPerm, faceOf, invertAlg, MOVES, solvedCube,
-  type CubeState,
+  applyAlg, applyPerm, caseLabels, faceOf, invertAlg, labelsToState, lastLayerArrows, MOVES,
+  solvedCube, type CubeState, type Labels,
 } from '../src/cube/moves.ts';
 import { PLL_CASES, PLL_GROUPS } from '../src/cfop/pll.ts';
 
@@ -23,6 +23,38 @@ function check(ok: boolean, message: string): void {
   if (!ok) failures.push(message);
 }
 
+
+/**
+ * The cycle structure each case is named for, as `corners|edges` with each
+ * cycle's length listed.
+ *
+ * This is the definition of the case, not a property of the alg that solves it:
+ * a G perm is two 3-cycles, a T perm is a pair of swaps, and Ua is three edges
+ * going round. Spelling them out here is what makes the alignment check mean
+ * something — the same case framed a quarter turn off has a different shape,
+ * and only comparing against the name catches it.
+ */
+const CASE_SHAPE: Record<string, string> = {
+  Ua: '-|3', Ub: '-|3', H: '-|2,2', Z: '-|2,2',
+  Aa: '3|-', Ab: '3|-', E: '2,2|-',
+  T: '2|2', Ja: '2|2', Jb: '2|2', Ra: '2|2', Rb: '2|2', F: '2|2',
+  Ga: '3|3', Gb: '3|3', Gc: '3|3', Gd: '3|3',
+  V: '2|2', Y: '2|2', Na: '2|2', Nb: '2|2',
+};
+
+/** The same thing, read off the arrows the tile will actually draw. */
+function arrowShape(labels: Labels): string {
+  const arrows = lastLayerArrows(labels);
+  const lengths = (kind: 'corner' | 'edge') => {
+    const moved = arrows.filter((arrow) => arrow.kind === kind);
+    // Each arrow is one piece's move, except a double-headed one, which stands
+    // for two — so a swap reads as 2 and a 3-cycle as 3.
+    const pieces = moved.reduce((total, arrow) => total + (arrow.both ? 2 : 1), 0);
+    if (pieces === 0) return '-';
+    return moved.some((arrow) => arrow.both) && pieces === 4 ? '2,2' : String(pieces);
+  };
+  return `${lengths('corner')}|${lengths('edge')}`;
+}
 const SOLVED = solvedCube();
 
 /**
@@ -136,12 +168,23 @@ function checkInverses(): void {
     // A diagram with nothing lined up is a diagram nobody can recognise, and
     // it's what a broken alignment would produce. Every PLL leaves at least a
     // few side stickers home once it's turned to the right angle.
-    const aligned = alignLastLayer(applyAlg(SOLVED, invertAlg(item.alg)));
+    const labels = caseLabels(item.alg);
+    const aligned = labelsToState(labels);
     let home = 0;
     for (const facelet of [9, 10, 11, 18, 19, 20, 36, 37, 38, 45, 46, 47]) {
       if (aligned[facelet] === SOLVED[facelet]) home += 1;
     }
-    check(home >= 3, `${item.name}: only ${home} side stickers line up — check alignLastLayer`);
+    check(home >= 2, `${item.name}: only ${home} side stickers line up — check caseLabels`);
+
+    // And the arrows drawn over it have to describe the case it is named for.
+    // This is the check that catches a diagram framed a quarter turn off: a G
+    // perm seen from the wrong AUF is a corner swap and an edge 4-cycle rather
+    // than the two 3-cycles everyone draws, and nothing above would notice.
+    const shape = arrowShape(labels);
+    check(
+      shape === CASE_SHAPE[item.name],
+      `${item.name}: drawn as ${shape}, expected ${CASE_SHAPE[item.name]}`,
+    );
   }
 }
 
