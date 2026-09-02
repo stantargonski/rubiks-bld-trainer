@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { formatTime } from '../format'
 import {
   average, best, bestAverage, durationText, mean, meanExec, meanMemo, stdev, totalTime,
@@ -24,6 +25,15 @@ interface SummaryTilesProps {
 export default function SummaryTiles({ solves, decimals, event }: SummaryTilesProps) {
   const time = (ms: number) => formatTime(ms, decimals)
 
+  // One list rather than a tile each: the three differ only in their window,
+  // and `bestAverage` is expensive enough at a hundred to be worth computing
+  // once per solve list rather than once per render.
+  const averages = useMemo(() => [5, 12, 100].map((size) => ({
+    size,
+    current: average(solves, size),
+    record: bestAverage(solves, size),
+  })), [solves])
+
   return (
     <div className="tiles">
       <Tile label="solves" value={String(solves.length)} />
@@ -35,12 +45,14 @@ export default function SummaryTiles({ solves, decimals, event }: SummaryTilesPr
         value={time(stdev(solves))}
         note="how far a typical solve lands from the mean"
       />
-      <Tile label="ao5" value={time(average(solves, 5))} note={`best ${time(bestAverage(solves, 5))}`} />
-      <Tile
-        label="ao12"
-        value={time(average(solves, 12))}
-        note={`best ${time(bestAverage(solves, 12))}`}
-      />
+      {averages.map((item) => (
+        <Tile
+          key={item.size}
+          label={`ao${item.size}`}
+          value={time(item.current)}
+          note={`best ${time(item.record)}`}
+        />
+      ))}
 
       {event.split && (
         <>

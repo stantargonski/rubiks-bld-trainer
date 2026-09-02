@@ -18,6 +18,22 @@ import type { AlgCase } from './types';
  * whatever you type in yourself, so your own alg is never checked — override
  * freely.
  */
+/**
+ * Whether a case is worth drawing arrows on.
+ *
+ * The G perms are not. Three corners going one way and three edges going the
+ * other is six lines crossing a nine-square grid, and what comes out is a
+ * tangle that says less than the bare colours do — they're recognised off the
+ * block of matching stickers anyway, never off the paths.
+ *
+ * Asked of the id rather than of `group`: 'double 3-cycle' is a recognition
+ * family that another case could join, and this is a statement about these
+ * four in particular.
+ */
+export function hasArrows(item: AlgCase): boolean {
+  return !item.id.startsWith('pll-g');
+}
+
 export const PLL_CASES: AlgCase[] = [
   // ----- edges only: all four corners already solved -----
   { id: 'pll-ua', set: 'pll', name: 'Ua', group: 'edges only',

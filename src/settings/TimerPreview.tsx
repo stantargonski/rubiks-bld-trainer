@@ -18,7 +18,7 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
     <div className="timer-preview" aria-hidden="true">
       <div className="timer-preview-scale">
         <div className="timer-frame">
-          {settings.showSolveList && (
+          {(settings.showSolveList || settings.showStats) && (
             <aside className="timer-rail">
               {settings.showStats && (
                 <div className="rail-stats">
@@ -26,6 +26,7 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
                     <tbody>
                       <tr><th scope="row">ao5</th><td>12.88</td></tr>
                       <tr><th scope="row">ao12</th><td>13.20</td></tr>
+                      <tr><th scope="row">ao100</th><td>13.64</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -33,19 +34,26 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
               <div className="rail-head">
                 <span className="session-select">3x3x3</span>
               </div>
-              <div className="rail-list">
-                <ol className="solve-list">
-                  {[12.34, 13.91, 11.08, 14.62, 12.77].map((time, index) => (
-                    <li key={time}>
-                      <span className="solve-row">
-                        <span className="solve-n">{5 - index}</span>
-                        <span className="solve-t">{time.toFixed(settings.decimals)}</span>
-                        <span className="solve-ao">12.88</span>
-                        <span className="solve-ao">13.20</span>
-                      </span>
-                    </li>
-                  ))}
-                </ol>
+              {settings.showSolveList && (
+                <div className="rail-list">
+                  <ol className="solve-list">
+                    {[12.34, 13.91, 11.08, 14.62, 12.77].map((time, index) => (
+                      <li key={time}>
+                        <span className="solve-row">
+                          <span className="solve-n">{5 - index}</span>
+                          <span className="solve-t">{time.toFixed(settings.decimals)}</span>
+                          <span className="solve-ao">12.88</span>
+                          <span className="solve-ao">13.20</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              <div className="rail-tools">
+                <span className="rail-tool">🏁 comp sim</span>
+                <span className="rail-tool">🧊 preview</span>
               </div>
             </aside>
           )}
@@ -53,7 +61,13 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
           <div className="timer-main">
             {settings.showScramble && (
               <div className="scramble-bar">
-                <div className="scramble-head"><span className="event-picker">3x3x3</span></div>
+                <div className="scramble-head">
+                  <span className="event-picker">3x3x3</span>
+                  <span className="scramble-nav">
+                    <span>‹ last</span>
+                    <span>next ›</span>
+                  </span>
+                </div>
                 <div className="scramble-body">
                   <span className="scramble-text">
                     {"D2 F' U R2 B L' F2 U'".split(' ').map((move, index) => (
@@ -87,7 +101,10 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
                     bottom: settings.previewBottom,
                   }}
                 >
-                  <span className="preview-title">3x3 scramble</span>
+                  <span className="preview-title">
+                    3x3 scramble
+                    <span className="preview-reset">⟲</span>
+                  </span>
                   <div className="preview-body"><div className="preview-stub" /></div>
                 </div>
               )}

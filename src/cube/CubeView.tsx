@@ -108,8 +108,10 @@ export function CubeTopView({ state, arrows = [], palette = FACE_COLOR, label }:
       <defs>
         <marker
           id={head}
-          markerWidth={4}
-          markerHeight={4}
+          viewBox="0 0 4 4"
+          markerUnits="userSpaceOnUse"
+          markerWidth={0.56}
+          markerHeight={0.56}
           refX={3.2}
           refY={2}
           orient="auto"
@@ -147,7 +149,6 @@ export function CubeTopView({ state, arrows = [], palette = FACE_COLOR, label }:
             x2={x2}
             y2={y2}
             markerEnd={`url(#${head})`}
-            markerStart={arrow.both ? `url(#${head})` : undefined}
           />
         )
       })}

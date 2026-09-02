@@ -1,3 +1,4 @@
+import { hasArrows } from './pll'
 import { CONFIDENCE_LABELS, type AlgCase, type CaseEntry, type Confidence } from './types'
 
 const LEVELS: Confidence[] = [0, 1, 2, 3]
@@ -50,7 +51,13 @@ export default function CaseEditor({ item, entry, onChange }: CaseEditorProps) {
         ))}
       </div>
 
-      <p className="hint">The arrows on the diagram show where each piece goes.</p>
+      {hasArrows(item) ? (
+        <p className="hint">The arrows on the diagram show where each piece goes.</p>
+      ) : (
+        <p className="hint">
+          No arrows on the G perms — six crossing lines say less than the colours do.
+        </p>
+      )}
     </div>
   )
 }
