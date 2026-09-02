@@ -1,3 +1,5 @@
+import { isEventId, type EventId } from './events';
+
 /** What the clock shows while a solve is actually running. */
 export type RunningDisplay = 'tenths' | 'seconds' | 'hidden';
 
@@ -43,7 +45,25 @@ export interface TimerSettings {
   previewBottom: number;
   /** How many cubes a multi-blind attempt is for. */
   mbldCount: number;
+  /**
+   * Which events the stats page quotes an all-time best single for, in the order
+   * they are shown. Yours rather than the app's: the three it used to hardcode
+   * were the three most people practise, which is no comfort at all if you are
+   * the one practising Square-1.
+   */
+  benchEvents: EventId[];
 }
+
+/**
+ * How many events the best-single strip will hold.
+ *
+ * The strip is one line, and the figures are set large because they are the ones
+ * you would quote someone. Past six the labels start colliding on a laptop, and
+ * the honest fix is a limit rather than type that shrinks until it is decorative.
+ */
+export const BENCH_MAX = 6;
+
+export const DEFAULT_BENCH_EVENTS: EventId[] = ['333', '222', '444'];
 
 export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   schemaVersion: 2,
@@ -67,6 +87,7 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   previewRight: 16,
   previewBottom: 16,
   mbldCount: 3,
+  benchEvents: DEFAULT_BENCH_EVENTS,
 };
 
 export const TIMER_SETTINGS_KEY = 'timer.settings.v1';
@@ -149,6 +170,7 @@ export function readTimerSettings(input: unknown): TimerSettings {
       previewRight: clamp(parsed.previewRight, PREVIEW_MARGIN, 4000, DEFAULT_TIMER_SETTINGS.previewRight),
       previewBottom: clamp(parsed.previewBottom, PREVIEW_MARGIN, 4000, DEFAULT_TIMER_SETTINGS.previewBottom),
       mbldCount: clamp(parsed.mbldCount, MBLD_MIN, MBLD_MAX, DEFAULT_TIMER_SETTINGS.mbldCount),
+      benchEvents: events(parsed.benchEvents),
     };
   } catch {
     return DEFAULT_TIMER_SETTINGS;
@@ -157,6 +179,23 @@ export function readTimerSettings(input: unknown): TimerSettings {
 
 export function saveTimerSettings(settings: TimerSettings): void {
   localStorage.setItem(TIMER_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+/**
+ * A list of event ids out of an untrusted blob: unknown ids dropped, duplicates
+ * dropped, and never longer than the strip can hold. An empty list is allowed —
+ * that is someone who wants the strip gone, not a broken setting — but a value
+ * that isn't a list at all falls back to the stock three.
+ */
+function events(value: unknown): EventId[] {
+  if (!Array.isArray(value)) return DEFAULT_BENCH_EVENTS;
+
+  const out: EventId[] = [];
+  for (const item of value) {
+    if (isEventId(item) && !out.includes(item)) out.push(item);
+    if (out.length === BENCH_MAX) break;
+  }
+  return out;
 }
 
 function bool(value: unknown, fallback: boolean): boolean {

@@ -12,16 +12,18 @@ import ActivityHeatmap from './charts/ActivityHeatmap'
 import AverageDetail from './AverageDetail'
 import type { AverageView } from './averageText'
 import { DAY, RANGES, SPANS, type Range } from './charts/ranges'
-
-/** The three the header calls out. Everything else lives in the per-event table. */
-const BENCHMARKS: EventId[] = ['333', '222', '444']
+import { BENCH_MAX, type TimerSettings } from './settings'
 
 interface StatsPageProps {
   store: TimerStore
-  decimals: 2 | 3
+  settings: TimerSettings
+  onSettings: (next: TimerSettings) => void
 }
 
-export default function StatsPage({ store, decimals }: StatsPageProps) {
+export default function StatsPage({ store, settings, onSettings }: StatsPageProps) {
+  const decimals = settings.decimals
+  /** Whether the strip's event picker is open. */
+  const [picking, setPicking] = useState(false)
   // Opens on whatever you were just timing, which is nearly always what you
   // came here to look at.
   const [sessionId, setSessionId] = useState(() => activeSession(store).id)
@@ -74,6 +76,20 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
     return best(byEvent.get(id) ?? [])
   }
 
+  const bench = settings.benchEvents
+
+  /** Adds or removes one event from the strip, keeping the catalogue's order. */
+  function toggleBench(id: EventId) {
+    const next = bench.includes(id)
+      ? bench.filter((item) => item !== id)
+      : [...bench, id]
+    if (next.length > BENCH_MAX) return
+    onSettings({
+      ...settings,
+      benchEvents: EVENTS.map((item) => item.id).filter((item) => next.includes(item)),
+    })
+  }
+
   const activitySolves = useMemo<Solve[]>(() => {
     if (filter === 'all') return everySolve
     if (filter.startsWith('e:')) return byEvent.get(filter.slice(2) as EventId) ?? []
@@ -112,15 +128,50 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
         </div>
       </section>
 
-      {/* ---- the three numbers you'd quote someone ---- */}
-      <section className="card bench-strip">
-        <h2 className="bench-title">all-time best single</h2>
-        {BENCHMARKS.map((id) => (
-          <div className="bench" key={id}>
-            <span className="bench-label">{eventOf(id).short}</span>
-            <strong className="bench-value">{formatTime(bestFor(id), decimals)}</strong>
+      {/* ---- the numbers you'd quote someone ---- */}
+      <section className="card">
+        <div className="bench-strip">
+          <h2 className="bench-title">all-time best single</h2>
+          {bench.map((id) => (
+            <div className="bench" key={id}>
+              <span className="bench-label">{eventOf(id).short}</span>
+              <strong className="bench-value">{formatTime(bestFor(id), decimals)}</strong>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="bench-edit"
+            aria-expanded={picking}
+            onClick={() => setPicking(!picking)}
+          >
+            {picking ? 'done' : 'edit'}
+          </button>
+        </div>
+
+        {picking && (
+          <div className="bench-picker">
+            <p>
+              Up to {BENCH_MAX}, so the row stays one line and the figures stay
+              the size you'd quote them at.
+            </p>
+            <div className="bench-options">
+              {EVENTS.map((item) => {
+                const on = bench.includes(item.id)
+                return (
+                  <label key={item.id} className={on ? 'bench-option on' : 'bench-option'}>
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={!on && bench.length >= BENCH_MAX}
+                      onChange={() => toggleBench(item.id)}
+                    />
+                    {item.name}
+                  </label>
+                )
+              })}
+            </div>
           </div>
-        ))}
+        )}
       </section>
 
       {/* ---- when you practised ---- */}
@@ -139,9 +190,7 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
               )}
               <optgroup label="session">
                 {store.sessions.map((item) => (
-                  <option key={item.id} value={`s:${item.id}`}>
-                    {item.name} ({item.solves.length})
-                  </option>
+                  <option key={item.id} value={`s:${item.id}`}>{item.name}</option>
                 ))}
               </optgroup>
             </select>
@@ -205,9 +254,7 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
               onChange={(change) => setSessionId(change.target.value)}
             >
               {store.sessions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} ({item.solves.length})
-                </option>
+                <option key={item.id} value={item.id}>{item.name}</option>
               ))}
             </select>
           </div>

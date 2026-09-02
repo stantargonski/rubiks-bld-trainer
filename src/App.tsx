@@ -172,7 +172,11 @@ export default function App() {
           />
         )}
         {section === 'stats' && (
-          <StatsPage store={timerStore} decimals={timerSettings.decimals} />
+          <StatsPage
+            store={timerStore}
+            settings={timerSettings}
+            onSettings={updateTimerSettings}
+          />
         )}
         {section === 'settings' && (
           <SettingsPage
