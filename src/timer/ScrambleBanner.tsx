@@ -45,7 +45,15 @@ export default function ScrambleBanner({
 
   return (
     <div className="scramble-bar">
-      <div className="scramble-head">{children}</div>
+      {/* The nav sits with the picker rather than beside the scramble: both
+          decide what you are about to solve, and neither is the scramble. */}
+      <div className="scramble-head">
+        {children}
+        <div className="scramble-nav">
+          <button type="button" onClick={onLast} disabled={!canGoBack}>‹ last</button>
+          <button type="button" onClick={onNext}>next ›</button>
+        </div>
+      </div>
 
       <div className="scramble-body">
         <button
@@ -64,11 +72,6 @@ export default function ScrambleBanner({
             ))
             : scramble.moves.map((move, index) => <span key={index}>{move}</span>)}
         </button>
-
-        <div className="scramble-nav">
-          <button type="button" onClick={onLast} disabled={!canGoBack}>‹ last</button>
-          <button type="button" onClick={onNext}>next ›</button>
-        </div>
       </div>
 
     </div>

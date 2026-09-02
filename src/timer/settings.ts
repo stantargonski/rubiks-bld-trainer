@@ -130,8 +130,8 @@ export function readTimerSettings(input: unknown): TimerSettings {
       ),
       // Clamped generously rather than to the window: this is read before there
       // is a window to measure, and the panel re-clamps itself once mounted.
-      previewRight: clamp(parsed.previewRight, PREVIEW_MARGIN, 4000, 16),
-      previewBottom: clamp(parsed.previewBottom, PREVIEW_MARGIN, 4000, 16),
+      previewRight: clamp(parsed.previewRight, PREVIEW_MARGIN, 4000, DEFAULT_TIMER_SETTINGS.previewRight),
+      previewBottom: clamp(parsed.previewBottom, PREVIEW_MARGIN, 4000, DEFAULT_TIMER_SETTINGS.previewBottom),
       mbldCount: clamp(parsed.mbldCount, MBLD_MIN, MBLD_MAX, DEFAULT_TIMER_SETTINGS.mbldCount),
     };
   } catch {

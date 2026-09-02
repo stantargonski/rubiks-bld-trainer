@@ -13,7 +13,7 @@ import SolveList from './SolveList'
 import StatsPanel from './StatsPanel'
 import CompBar from './CompBar'
 import type { Dispatch, SetStateAction } from 'react'
-import type { TimerSettings } from './settings'
+import { DEFAULT_TIMER_SETTINGS, type TimerSettings } from './settings'
 import { average } from './stats'
 import { formatOf, resultOf, suggestTarget } from './comp'
 import { downloadText, sessionCsv, slug, stamp } from '../data/backup'
@@ -190,7 +190,9 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
 
   return (
     <div className={solving ? 'timer-frame solving' : 'timer-frame'}>
-      {settings.showSolveList && (
+      {/* The rail carries the tools now, so it stands as long as anything in
+          it does rather than only as long as the solve list. */}
+      {(settings.showSolveList || settings.showStats) && (
         <aside className="timer-rail">
           {settings.showStats && (
             <div className="rail-stats">
@@ -210,13 +212,37 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
             />
           </div>
 
-          <div className="rail-list">
-            <SolveList
-              solves={solves}
-              decimals={settings.decimals}
-              onPenalty={setPenalty}
-              onDelete={deleteSolve}
-            />
+          {settings.showSolveList && (
+            <div className="rail-list">
+              <SolveList
+                solves={solves}
+                decimals={settings.decimals}
+                onPenalty={setPenalty}
+                onDelete={deleteSolve}
+              />
+            </div>
+          )}
+
+          {/* Pinned to the foot of the rail: both are switches for the whole
+              timer, and putting them here keeps them still while the list
+              above them grows. */}
+          <div className="rail-tools">
+            <button
+              type="button"
+              className="rail-tool"
+              aria-pressed={openRound !== null}
+              onClick={openRound ? () => setRound(null) : startRound}
+            >
+              🏁 comp sim
+            </button>
+            <button
+              type="button"
+              className="rail-tool"
+              aria-pressed={settings.showCubeNet}
+              onClick={() => onSettings({ ...settings, showCubeNet: !settings.showCubeNet })}
+            >
+              🧊 preview
+            </button>
           </div>
         </aside>
       )}
@@ -277,21 +303,8 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
           </div>
         </div>
 
-        <div className="timer-dock">
-          <button
-            type="button"
-            className="dock-round"
-            title="competition round"
-            aria-label="competition round"
-            aria-pressed={openRound !== null}
-            onClick={openRound ? () => setRound(null) : startRound}
-          >
-            🏁
-          </button>
-        </div>
-
-        {/* Outside the dock, because it is no longer pinned to a corner — it
-            sits wherever it was last dragged, over the whole frame. */}
+        {/* Not pinned to a corner — it sits wherever it was last dragged, over
+            the whole frame. */}
         {settings.showCubeNet && (
           <ScramblePreview
             event={event}
@@ -304,6 +317,13 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
               onSettings({ ...settings, previewWidth, previewHeight })}
             onMove={(previewRight, previewBottom) =>
               onSettings({ ...settings, previewRight, previewBottom })}
+            onReset={() => onSettings({
+              ...settings,
+              previewWidth: DEFAULT_TIMER_SETTINGS.previewWidth,
+              previewHeight: DEFAULT_TIMER_SETTINGS.previewHeight,
+              previewRight: DEFAULT_TIMER_SETTINGS.previewRight,
+              previewBottom: DEFAULT_TIMER_SETTINGS.previewBottom,
+            })}
           />
         )}
       </div>

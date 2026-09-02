@@ -14,6 +14,8 @@ interface ScramblePreviewProps {
   bottom: number
   onResize: (width: number, height: number) => void
   onMove: (right: number, bottom: number) => void
+  /** Back to the size and corner it ships at, after a drag has lost it. */
+  onReset: () => void
 }
 
 /**
@@ -31,7 +33,7 @@ interface ScramblePreviewProps {
  * the pinned one, or the panel grows off the screen.
  */
 export default function ScramblePreview({
-  event, scramble, width, height, right, bottom, onResize, onMove,
+  event, scramble, width, height, right, bottom, onResize, onMove, onReset,
 }: ScramblePreviewProps) {
   const size = event.size ?? 3
 
@@ -147,6 +149,19 @@ export default function ScramblePreview({
         onPointerCancel={onPointerUp}
       >
         {event.short} scramble
+
+        <button
+          type="button"
+          className="preview-reset"
+          title="back to the default size and position"
+          aria-label="reset the scramble preview"
+          // The title bar is the drag handle, so the press that starts this
+          // click would otherwise start a drag underneath it.
+          onPointerDown={(down) => down.stopPropagation()}
+          onClick={onReset}
+        >
+          ⟲
+        </button>
       </span>
 
       <div className="preview-body">

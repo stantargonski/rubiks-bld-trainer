@@ -45,13 +45,12 @@ export function mean(solves: Solve[]): number {
 }
 
 /**
- * WCA trimmed average over the most recent `size` solves: drop the single best
- * and the single worst, mean what's left.
+ * Trimmed average over the most recent `size` solves: drop the best and worst
+ * `trimCount(size)` of them, mean what's left.
  *
  * DNFs need no branch of their own because effectiveMs makes them Infinity, so
- * they sort to the end. One DNF lands in the trimmed-worst slot and disappears.
- * Two or more means a DNF survives the trim, and the whole average is a DNF —
- * which is what the second-highest entry being non-finite tells us.
+ * they sort to the end. A DNF inside the trimmed-worst slots disappears; one
+ * that survives the trim makes the whole average a DNF.
  */
 export function average(solves: Solve[], size: number): number {
   if (size < 3 || solves.length < size) return NaN;
@@ -67,12 +66,28 @@ export function trimmedAverage(values: number[]): number {
   const size = values.length;
   if (size < 3) return NaN;
 
+  const trim = trimCount(size);
   const window = [...values].sort((a, b) => a - b);
-  if (!Number.isFinite(window[size - 2])) return Infinity;
+  // The worst entry that still counts. Non-finite means a DNF outlived the
+  // trim, and one surviving DNF is the whole average.
+  if (!Number.isFinite(window[size - 1 - trim])) return Infinity;
 
   let total = 0;
-  for (let i = 1; i < size - 1; i += 1) total += window[i];
-  return total / (size - 2);
+  for (let i = trim; i < size - trim; i += 1) total += window[i];
+  return total / (size - 2 * trim);
+}
+
+/**
+ * How many times drop from each end of an average.
+ *
+ * One apiece up to ao19, which is the WCA rule and keeps ao5 and ao12 exactly
+ * as they were, then 5% apiece — so an ao100 drops the best five and the worst
+ * five, the convention every other timer uses. Trimming only one out of a
+ * hundred would make a single unlucky DNF the whole figure, which over that
+ * many solves is close to guaranteed.
+ */
+export function trimCount(size: number): number {
+  return Math.max(1, Math.floor(size * 0.05));
 }
 
 /**
@@ -151,9 +166,15 @@ export function totalTime(solves: Solve[]): number {
 export function bestAverage(solves: Solve[], size: number): number {
   if (solves.length < size) return NaN;
 
+  // Reduced to effective times once for the whole session rather than once per
+  // window. Going through `average` sliced the solves, sliced the copy again,
+  // then mapped it — three passes a window, which ao100 pays on every one of
+  // them in a rail that redraws on every clock tick.
+  const times = solves.map(effectiveMs);
+
   let lowest = Infinity;
-  for (let start = 0; start + size <= solves.length; start += 1) {
-    const value = average(solves.slice(start, start + size), size);
+  for (let start = 0; start + size <= times.length; start += 1) {
+    const value = trimmedAverage(times.slice(start, start + size));
     if (value < lowest) lowest = value;
   }
   return lowest;

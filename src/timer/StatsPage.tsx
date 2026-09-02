@@ -94,18 +94,16 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
           <span className="header-label">solves</span>
         </div>
 
+        {/* Ordered so the time reads last: it is the figure the row builds to,
+            and the group is flush right, so last is also right-most. */}
         <div className="header-figures">
-          <div>
-            <span className="header-label">time solving</span>
-            <strong className="header-figure">{durationText(totalTime(everySolve))}</strong>
-          </div>
-          <div>
-            <span className="header-label">sessions</span>
-            <strong className="header-figure">{store.sessions.length}</strong>
-          </div>
           <div>
             <span className="header-label">events practised</span>
             <strong className="header-figure">{practised.length}</strong>
+          </div>
+          <div>
+            <span className="header-label">time solving</span>
+            <strong className="header-figure">{durationText(totalTime(everySolve))}</strong>
           </div>
         </div>
       </section>
@@ -218,6 +216,7 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
           <span>
             <i className="key ao5" /> ao5
             <i className="key ao12" /> ao12
+            <i className="key ao100" /> ao100
             <i className="key pb" /> personal best
           </span>
           <span className="chart-spans">

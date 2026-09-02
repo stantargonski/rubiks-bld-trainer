@@ -1,9 +1,10 @@
+import { useMemo } from 'react'
 import { formatTime } from '../format'
 import { rollingAverages } from '../stats'
 import { effectiveMs, type Solve } from '../types'
 
 /**
- * Every solve in the session, with the ao5 and ao12 drawn over the top.
+ * Every solve in the session, with the ao5, ao12 and ao100 drawn over the top.
  *
  * Hand-rolled SVG rather than a charting library: the app has no runtime
  * dependencies beyond React, and what's needed here is a polyline and some
@@ -32,6 +33,14 @@ function niceStep(span: number): number {
 }
 
 export default function TimeChart({ solves, decimals }: TimeChartProps) {
+  // Each series costs a pass per solve over its own window, so the ao100 line
+  // alone is twenty times the ao5 line. Memoised on the solves rather than
+  // recomputed whenever the span buttons or the theme move underneath it.
+  const [ao5, ao12, ao100] = useMemo(
+    () => [5, 12, 100].map((size) => rollingAverages(solves, size)),
+    [solves],
+  )
+
   const times = solves.map(effectiveMs)
   const finite = times.filter((value) => Number.isFinite(value))
 
@@ -53,9 +62,6 @@ export default function TimeChart({ solves, decimals }: TimeChartProps) {
     PAD.left + (solves.length === 1 ? plotWidth / 2 : (index / (solves.length - 1)) * plotWidth)
   const y = (ms: number) =>
     PAD.top + plotHeight - ((ms - bottom) / (top - bottom)) * plotHeight
-
-  const ao5 = rollingAverages(solves, 5)
-  const ao12 = rollingAverages(solves, 12)
 
   /** A line that simply stops wherever the average isn't defined or is a DNF. */
   function path(values: number[]): string {
@@ -95,6 +101,7 @@ export default function TimeChart({ solves, decimals }: TimeChartProps) {
         </g>
       ))}
 
+      <path className="line ao100" d={path(ao100)} fill="none" />
       <path className="line ao12" d={path(ao12)} fill="none" />
       <path className="line ao5" d={path(ao5)} fill="none" />
 
