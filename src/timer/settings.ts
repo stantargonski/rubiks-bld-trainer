@@ -92,6 +92,9 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
 
 export const TIMER_SETTINGS_KEY = 'timer.settings.v1';
 
+/** Every settings schema this build reads. See TIMER_STORE_VERSIONS on the rule. */
+export const TIMER_SETTINGS_VERSIONS = [1, 2];
+
 export const PREVIEW_MIN = 200;
 export const PREVIEW_MAX = 680;
 
@@ -130,7 +133,7 @@ export function readTimerSettings(input: unknown): TimerSettings {
     type Incoming = Omit<Partial<TimerSettings>, 'schemaVersion'> & { schemaVersion?: number };
     const parsed = input as Incoming | null;
     const version = parsed?.schemaVersion;
-    if (!parsed || (version !== 1 && version !== 2)) return DEFAULT_TIMER_SETTINGS;
+    if (!parsed || !TIMER_SETTINGS_VERSIONS.includes(version as number)) return DEFAULT_TIMER_SETTINGS;
 
     // Field by field rather than a spread, so a key added here later gets its
     // default instead of arriving undefined out of an older saved blob.

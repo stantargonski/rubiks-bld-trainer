@@ -16,6 +16,9 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const SETTINGS_KEY = 'bld.settings.v1';
 
+/** Every buffer-settings schema this build reads. See TIMER_STORE_VERSIONS on the rule. */
+export const BLD_SETTINGS_VERSIONS = [1];
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -28,7 +31,9 @@ export function loadSettings(): Settings {
 /** Settings out of an untrusted blob — a saved one, or one from a backup file. */
 export function readSettings(input: unknown): Settings {
   const parsed = input as Partial<Settings> | null;
-  if (!parsed || parsed.schemaVersion !== 1) return DEFAULT_SETTINGS;
+  if (!parsed || !BLD_SETTINGS_VERSIONS.includes(parsed.schemaVersion as number)) {
+    return DEFAULT_SETTINGS;
+  }
   return {
     schemaVersion: 1,
     cornerBuffer: parsed.cornerBuffer ?? DEFAULT_SETTINGS.cornerBuffer,

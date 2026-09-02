@@ -136,6 +136,9 @@ export const DEFAULT_APPEARANCE: Appearance = {
 
 export const APPEARANCE_KEY = 'app.appearance.v1';
 
+/** Every appearance schema this build reads. See TIMER_STORE_VERSIONS on the rule. */
+export const APPEARANCE_VERSIONS = [1];
+
 export function themeOf(id: string): Theme {
   return THEMES.find((theme) => theme.id === id) ?? THEMES[0];
 }
@@ -156,7 +159,9 @@ function pick(value: unknown, allowed: string[], fallback: string): string {
 /** Appearance out of an untrusted blob. Anything unreadable falls back. */
 export function readAppearance(input: unknown): Appearance {
   const parsed = input as Partial<Appearance> | null;
-  if (!parsed || parsed.schemaVersion !== 1) return DEFAULT_APPEARANCE;
+  if (!parsed || !APPEARANCE_VERSIONS.includes(parsed.schemaVersion as number)) {
+    return DEFAULT_APPEARANCE;
+  }
 
   const themeIds = THEMES.map((theme) => theme.id);
   const fontIds = FONTS.map((font) => font.id);

@@ -39,6 +39,17 @@ export const MAX_SOLVE_MS = 24 * 60 * 60 * 1000;
 export const MIN_SOLVE_DATE = Date.UTC(2000, 0, 1);
 
 /**
+ * How far past now a stored solve date may sit before it reads as junk.
+ *
+ * Generous on purpose. This is a filter against a corrupt file writing a
+ * year-275760 date into a chart axis, not a clock-accuracy check — and it runs
+ * on every load, over records already saved. A tight bound here means someone
+ * whose machine clock was running fast records a solve, fixes their clock, and
+ * finds that solve quietly deleted the next time the app starts.
+ */
+export const MAX_CLOCK_SKEW = 365 * 24 * 60 * 60 * 1000;
+
+/**
  * What a store is allowed to grow to, in characters of JSON.
  *
  * Browsers give an origin about 5 MB of localStorage and enforce it by throwing
@@ -117,7 +128,7 @@ export function isSaneDate(value: unknown): value is number {
     typeof value === 'number' &&
     Number.isFinite(value) &&
     value >= MIN_SOLVE_DATE &&
-    value <= Date.now() + 24 * 60 * 60 * 1000
+    value <= Date.now() + MAX_CLOCK_SKEW
   );
 }
 

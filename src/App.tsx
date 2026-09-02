@@ -47,6 +47,7 @@ export default function App() {
   const [appearance, setAppearance] = useState(loadAppearance);
   const [timerStore, setTimerStore] = useState(loadTimerStore);
   const [backgroundNonce, setBackgroundNonce] = useState(0);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function updateSettings(next: Settings) {
     setSettings(next);
@@ -99,8 +100,14 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [cases])
 
+  // The one save worth reporting on. Solves are the only thing here you cannot
+  // retype, so a write that fails has to say so rather than leave the app
+  // looking like it is recording solves it is quietly dropping.
   useEffect(() => {
-    const timer = setTimeout(() => saveTimerStore(timerStore), 400)
+    const timer = setTimeout(() => {
+      const result = saveTimerStore(timerStore)
+      setSaveError(result.ok ? null : result.reason)
+    }, 400)
     return () => clearTimeout(timer)
   }, [timerStore])
 
@@ -141,6 +148,8 @@ export default function App() {
         ))}
        </nav>
       </header>
+
+      {saveError && <p className="save-error" role="alert">{saveError}</p>}
 
       <main className={section === 'timer' ? 'content flush' : 'content'}>
        <div className="content-inner">

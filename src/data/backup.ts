@@ -1,9 +1,9 @@
 import { describeBytes, MAX_FILE_BYTES, STORE_BUDGET } from './limits';
-import { migrate as migratePairs, PAIRS_KEY } from '../bld/letterPairs/storage';
-import { CFOP_KEY, normalizeCfopStore } from '../cfop/storage';
+import { migrate as migratePairs, PAIRS_KEY, PAIRS_VERSIONS } from '../bld/letterPairs/storage';
+import { CFOP_KEY, CFOP_VERSIONS, normalizeCfopStore } from '../cfop/storage';
 import { readSettings, SETTINGS_KEY } from '../settings/defaults';
 import { readTimerSettings, TIMER_SETTINGS_KEY } from '../timer/settings';
-import { migrate as migrateTimer, TIMER_KEY } from '../timer/storage';
+import { migrate as migrateTimer, TIMER_KEY, TIMER_STORE_VERSIONS } from '../timer/storage';
 import { effectiveMs, execMs, type Session, type Solve } from '../timer/types';
 import { eventOf } from '../timer/events';
 import { formatTime, type Decimals } from '../timer/format';
@@ -51,7 +51,7 @@ const SLOTS: Slot[] = [
   {
     key: PAIRS_KEY,
     label: 'letter pairs',
-    accept: (value) => (looksLikeStore(value, [1, 2], 'pairs') ? migratePairs(value) : null),
+    accept: (value) => (looksLikeStore(value, PAIRS_VERSIONS, 'pairs') ? migratePairs(value) : null),
   },
   {
     key: SETTINGS_KEY,
@@ -61,7 +61,7 @@ const SLOTS: Slot[] = [
   {
     key: TIMER_KEY,
     label: 'sessions and solves',
-    accept: (value) => (looksLikeStore(value, [1, 2, 3, 4], 'sessions') ? migrateTimer(value) : null),
+    accept: (value) => (looksLikeStore(value, TIMER_STORE_VERSIONS, 'sessions') ? migrateTimer(value) : null),
   },
   {
     key: TIMER_SETTINGS_KEY,
@@ -71,7 +71,7 @@ const SLOTS: Slot[] = [
   {
     key: CFOP_KEY,
     label: 'CFOP algs',
-    accept: (value) => (looksLikeStore(value, [1], 'cases') ? normalizeCfopStore(value) : null),
+    accept: (value) => (looksLikeStore(value, CFOP_VERSIONS, 'cases') ? normalizeCfopStore(value) : null),
   },
   {
     key: APPEARANCE_KEY,
@@ -79,6 +79,15 @@ const SLOTS: Slot[] = [
     accept: (value) => readAppearance(value),
   },
 ];
+
+/**
+ * Every localStorage slot this app owns.
+ *
+ * Exported so the pre-migration snapshot in src/data/snapshot.ts copies exactly
+ * what a backup would. A slot added to SLOTS is picked up by both without
+ * anyone having to remember the second place.
+ */
+export const SLOT_KEYS: string[] = SLOTS.map((slot) => slot.key);
 
 export interface Backup {
   app: string;

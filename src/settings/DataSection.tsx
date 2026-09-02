@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { downloadText, exportAll, importAll, stamp, type ImportReport } from '../data/backup'
 import { describeBytes, MAX_FILE_BYTES, tooBig } from '../data/limits'
+import { getSnapshot, restoreSnapshot, type Snapshot } from '../data/snapshot'
 
 /**
  * Backup and restore for everything the app has stored.
@@ -12,6 +13,27 @@ export default function DataSection() {
   const picker = useRef<HTMLInputElement>(null)
   const [report, setReport] = useState<ImportReport | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
+
+  // The copy taken automatically the first time this build ran. Absent on a
+  // fresh install, and absent where IndexedDB isn't available — both of which
+  // simply mean there is nothing to offer, not that something went wrong.
+  useEffect(() => {
+    let live = true
+    void getSnapshot().then((found) => { if (live) setSnapshot(found) })
+    return () => { live = false }
+  }, [])
+
+  async function rollBack() {
+    if (!snapshot) return
+    if (!window.confirm(
+      'This replaces everything stored now with the copy taken before this ' +
+      'version first ran. Continue?',
+    )) return
+
+    if (await restoreSnapshot()) window.location.reload()
+    else setError('That copy could not be written back.')
+  }
 
   async function save() {
     setError(null)
@@ -95,6 +117,23 @@ export default function DataSection() {
       <p className="hint">
         One file holds pairs, solves, algs and settings. Nothing leaves your browser.
       </p>
+
+      {snapshot && (
+        <div className="data-snapshot">
+          <h3>before this version</h3>
+          <p className="hint">
+            A copy of everything was taken automatically on{' '}
+            {new Date(snapshot.takenAt).toLocaleString()}, just before this version
+            of tstimer read your data for the first time. If anything looks wrong
+            since updating, this puts it back exactly as it was.
+          </p>
+          <div className="actions">
+            <button type="button" onClick={() => void rollBack()}>
+              restore that copy
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

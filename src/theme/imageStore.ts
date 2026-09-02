@@ -7,52 +7,20 @@
  * so the photo doesn't get to sit in the same drawer.
  */
 
-const DB_NAME = 'rubiks-trainer';
-const STORE = 'assets';
+import { idbDelete, idbGet, idbPut } from '../data/idb';
+
 const KEY = 'background';
 
-function open(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
-    };
-    request.onsuccess = () => { resolve(request.result); };
-    request.onerror = () => { reject(request.error ?? new Error('IndexedDB unavailable')); };
-  });
-}
-
-function run<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  return open().then((db) => new Promise<T>((resolve, reject) => {
-    const request = work(db.transaction(STORE, mode).objectStore(STORE));
-
-    request.onsuccess = () => { resolve(request.result); };
-    request.onerror = () => { reject(request.error ?? new Error('IndexedDB write failed')); };
-  }));
-}
-
 export async function putBackground(blob: Blob): Promise<void> {
-  await run('readwrite', (store) => store.put(blob, KEY));
+  await idbPut(KEY, blob);
 }
 
 export async function getBackground(): Promise<Blob | null> {
-  try {
-    return (await run<Blob | undefined>('readonly', (store) => store.get(KEY))) ?? null;
-  } catch {
-    // A private window or a blocked database is a reason to have no wallpaper,
-    // not a reason to fail to start.
-    return null;
-  }
+  return await idbGet<Blob>(KEY);
 }
 
 export async function clearBackground(): Promise<void> {
-  try {
-    await run('readwrite', (store) => store.delete(KEY));
-  } catch {
-    // Nothing to remove if the store was never reachable.
-  }
+  await idbDelete(KEY);
 }
 
 /**

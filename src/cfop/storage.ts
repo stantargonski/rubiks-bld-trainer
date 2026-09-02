@@ -2,6 +2,9 @@ import { emptyCfopStore, type CaseEntry, type CfopStore, type Confidence } from 
 
 export const CFOP_KEY = 'cfop.cases.v1';   // storage slot; the version lives inside the JSON
 
+/** Every CFOP schema this build reads. See TIMER_STORE_VERSIONS on the rule. */
+export const CFOP_VERSIONS = [1];
+
 export function loadCfopStore(): CfopStore {
   try {
     const raw = localStorage.getItem(CFOP_KEY);
@@ -28,7 +31,11 @@ export function normalizeCfopStore(input: unknown): CfopStore {
   if (!input || typeof input !== 'object') return emptyCfopStore();
 
   const raw = input as { schemaVersion?: number; cases?: unknown };
-  if (raw.schemaVersion !== 1 || !raw.cases || typeof raw.cases !== 'object') {
+  if (
+    !CFOP_VERSIONS.includes(raw.schemaVersion as number) ||
+    !raw.cases ||
+    typeof raw.cases !== 'object'
+  ) {
     return emptyCfopStore();
   }
 

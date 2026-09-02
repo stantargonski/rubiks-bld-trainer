@@ -2,6 +2,9 @@ import { emptyStore, type Confidence, type PairEntry, type PairStore } from './t
 
 export const PAIRS_KEY = 'bld.pairs.v1';   // storage slot; the version lives inside the JSON
 
+/** Every pair-library schema this build reads. See TIMER_STORE_VERSIONS on the rule. */
+export const PAIRS_VERSIONS = [1, 2];
+
 /** A v1 entry, when person/action/object were three separate fields. */
 interface LegacyEntry {
   code?: string;
@@ -80,9 +83,10 @@ export function importJSON(text: string): PairStore {
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('That file is not a pair library.');
   }
-  if (parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2) {
+  if (!PAIRS_VERSIONS.includes(parsed.schemaVersion as number)) {
     throw new Error(
-      `That file is schema version ${parsed.schemaVersion}; this app reads 1 and 2.`,
+      `That file is schema version ${parsed.schemaVersion}; ` +
+      `this app reads ${PAIRS_VERSIONS.join(' and ')}.`,
     );
   }
   return migrate(parsed);

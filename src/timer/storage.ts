@@ -4,6 +4,21 @@ import { emptyTimerStore, type Session, type Solve, type TimerStore } from './ty
 
 export const TIMER_KEY = 'timer.store.v1';   // storage slot; the version lives inside the JSON
 
+/**
+ * Every schema version this build can still read.
+ *
+ * One list, exported, because two places check it: the migrator below and the
+ * backup importer in src/data/backup.ts. They were separate literals, and a
+ * bump that missed one would have had the importer quietly report every solve
+ * you own as 'rejected'.
+ *
+ * Adding a *field* never belongs here 2014 readSolve and migrate fill missing
+ * fields from defaults, so a new field needs no new version. Add to this list
+ * only when the shape of something already stored actually changes, and add
+ * rather than replace: the old numbers are what existing installs still hold.
+ */
+export const TIMER_STORE_VERSIONS = [1, 2, 3, 4];
+
 export function loadTimerStore(): TimerStore {
   try {
     const raw = localStorage.getItem(TIMER_KEY);
@@ -14,8 +29,33 @@ export function loadTimerStore(): TimerStore {
   }
 }
 
-export function saveTimerStore(store: TimerStore): void {
-  localStorage.setItem(TIMER_KEY, JSON.stringify(store));
+export type SaveResult = { ok: true } | { ok: false; reason: string };
+
+/**
+ * Writes the store, and says so if it couldn't.
+ *
+ * `setItem` throws when the origin is out of room, and this is called from a
+ * debounced effect — so an unguarded throw here surfaces nowhere, and the app
+ * carries on looking like it is saving solves it is actually dropping. Losing
+ * the write is bad; losing it silently is the part worth fixing.
+ *
+ * Deliberately no size check before the attempt: the budget in data/limits.ts
+ * is a conservative figure for deciding whether to accept an *import*, and
+ * refusing a write here that the browser would have taken would cost the very
+ * solves it was meant to protect.
+ */
+export function saveTimerStore(store: TimerStore): SaveResult {
+  try {
+    localStorage.setItem(TIMER_KEY, JSON.stringify(store));
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      reason:
+        'There was no room to save your most recent solves. Export a backup from ' +
+        'Settings, then delete a session you no longer need.',
+    };
+  }
 }
 
 /**
@@ -40,7 +80,7 @@ export function migrate(input: unknown): TimerStore {
   // literal 4, which makes the older checks unreachable. Incoming JSON can be
   // any version, so it has to be read as a plain number.
   const raw = input as { schemaVersion?: number; sessions?: unknown; activeId?: unknown };
-  if (![1, 2, 3, 4].includes(raw.schemaVersion as number)) return emptyTimerStore();
+  if (!TIMER_STORE_VERSIONS.includes(raw.schemaVersion as number)) return emptyTimerStore();
   if (!Array.isArray(raw.sessions)) return emptyTimerStore();
 
   const sessions: Session[] = raw.sessions

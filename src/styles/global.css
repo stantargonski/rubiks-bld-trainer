@@ -2676,3 +2676,34 @@ textarea,
   border-color: transparent;
   color: var(--accent-ink);
 }
+
+/* ----- a save that failed ----- */
+/* Sits under the top bar rather than in a toast: a solve that didn't reach disk
+   is worth interrupting for, and worth still being on screen a minute later. */
+.save-error {
+  margin: 0;
+  padding: 10px 20px;
+  background: color-mix(in srgb, var(--holding) 16%, var(--panel));
+  border-bottom: 1px solid var(--holding);
+  color: var(--text);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 600;
+}
+
+/* ----- the automatic copy taken before a new version ----- */
+.data-snapshot {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.data-snapshot h3 {
+  margin: 0 0 8px;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.data-snapshot .hint {
+  margin: 0 0 10px;
+}
