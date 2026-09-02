@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useTimer } from './useTimer'
 import { clockPhase, clockText } from './display'
-import { formatTime } from './format'
+import { digitsFace, formatTime, MAX_ENTRY_DIGITS, parseDigits } from './format'
 import { eventOf, type EventId, type WcaEvent } from './events'
 import { prepare, scrambleFor, scrambleText, type Scramble } from './scramble'
 import EventPicker from './EventPicker'
 import MbldCount from './MbldCount'
+import MbldPrompt from './MbldPrompt'
 import ScrambleBanner from './ScrambleBanner'
 import ScramblePreview from './ScramblePreview'
 import SessionPicker from './SessionPicker'
@@ -20,8 +21,8 @@ import { average } from './stats'
 import { formatOf, resultOf, suggestTarget } from './comp'
 import { downloadText, sessionCsv, slug, stamp } from '../data/backup'
 import {
-  activeSession, effectiveMs, emptyTimerStore, newSession, newSolve,
-  type Penalty, type Session, type TimerStore,
+  activeSession, effectiveMs, emptyTimerStore, mbldIsDnf, newSession, newSolve,
+  type MbldResult, type Penalty, type Session, type TimerStore,
 } from './types'
 
 /** Where a comp round started, and what it started in. */
@@ -52,6 +53,12 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   const [compTarget, setCompTarget] = useState('')
   /** The average whose solves are open for reading, or null. */
   const [detail, setDetail] = useState<AverageView | null>(null)
+  /** Digits typed so far in the manual-entry mode, newest last. */
+  const [entry, setEntry] = useState('')
+  /** A finished multi-blind attempt waiting on its cube count. */
+  const [pendingMbld, setPendingMbld] = useState<
+    { ms: number; memoMs: number | null; penalty: Penalty } | null
+  >(null)
 
   // Derived every render — never mirrored into state of its own.
   const session = activeSession(store)
@@ -180,11 +187,28 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     setIndex(scrambles.length)
   }
 
+  /** Records a finished solve against the current scramble and moves on. */
+  function record(
+    finished: number,
+    memo: number | null,
+    penalty: Penalty,
+    mbld?: MbldResult,
+  ) {
+    const solve = newSolve(finished, memo, scrambleText(scramble), session.event, penalty, mbld)
+    updateActive((item) => ({ ...item, solves: [...item.solves, solve] }))
+    goNext()
+  }
+
   const { phase, ms, memoMs, inspectMs } = useTimer(
     (finished, memo, penalty) => {
-      const solve = newSolve(finished, memo, scrambleText(scramble), session.event, penalty)
-      updateActive((item) => ({ ...item, solves: [...item.solves, solve] }))
-      goNext()
+      // Multi-blind is the one event the clock can't finish on its own: how many
+      // cubes came out solved decides both the score and whether the attempt
+      // counted at all. Held here until that's answered.
+      if (event.scramble.kind === 'mbf') {
+        setPendingMbld({ ms: finished, memoMs: memo, penalty })
+        return
+      }
+      record(finished, memo, penalty)
     },
     {
       holdMs: settings.holdMs,
@@ -195,6 +219,37 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
 
   const timing = phase === 'running' || phase === 'memo'
   const solving = timing && settings.hideUiWhileRunning
+  const typedEntry = settings.entryMode === 'typed'
+
+  /**
+   * Commits what has been typed, if it amounts to a time.
+   *
+   * Zero is rejected along with an empty field: it is what you get from pressing
+   * enter twice, and a 0.00 solve in the history is worse than nothing happening.
+   */
+  function commitTyped() {
+    const typed = parseDigits(entry)
+    if (!Number.isFinite(typed) || typed <= 0) return
+
+    const solve = newSolve(typed, null, scrambleText(scramble), session.event, 'none')
+    updateActive((item) => ({ ...item, solves: [...item.solves, solve] }))
+    setEntry('')
+    goNext()
+  }
+
+  function onEntryKey(press: React.KeyboardEvent<HTMLInputElement>) {
+    if (press.key === 'Enter') { press.preventDefault(); commitTyped(); return }
+    if (press.key === 'Escape') { press.preventDefault(); setEntry(''); return }
+    if (press.key === 'Backspace') {
+      press.preventDefault()
+      setEntry((prev) => prev.slice(0, -1))
+      return
+    }
+    if (/^\d$/.test(press.key)) {
+      press.preventDefault()
+      setEntry((prev) => (prev.length >= MAX_ENTRY_DIGITS ? prev : prev + press.key))
+    }
+  }
 
   /**
    * What the clock reads when it is not running.
@@ -339,13 +394,35 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
                 centre is the window's centre whether or not there is a gap to
                 show. */}
             <div className="clock-line">
-              <div className={`clock ${clockPhase(phase, inspectMs)}`}>{face}</div>
+              {typedEntry ? (
+                /* An input rather than a div, and that is what makes it work:
+                   useTimer ignores every key while focus is in one, so the space
+                   bar stops being a start button for as long as you are typing
+                   a time into it. */
+                <input
+                  className="clock clock-entry"
+                  value={digitsFace(entry)}
+                  readOnly
+                  autoFocus
+                  inputMode="numeric"
+                  aria-label="type the time this solve took"
+                  onKeyDown={onEntryKey}
+                />
+              ) : (
+                <div className={`clock ${clockPhase(phase, inspectMs)}`}>{face}</div>
+              )}
               {settings.showDelta && !timing && Number.isFinite(delta) && (
                 <span className={delta < 0 ? 'clock-delta good' : 'clock-delta bad'}>
                   ({delta < 0 ? '-' : '+'}{formatTime(Math.abs(delta), settings.decimals)})
                 </span>
               )}
             </div>
+
+            {typedEntry && (
+              <p className="entry-hint">
+                type the digits — 1234 is 12.34 — then enter. esc clears.
+              </p>
+            )}
 
             {/* memoMs is only ever non-null on a split solve, so no mode check. */}
             {memoMs !== null && !timing && (
@@ -419,6 +496,22 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
           value={detail.value}
           decimals={settings.decimals}
           onClose={() => setDetail(null)}
+        />
+      )}
+
+      {pendingMbld && (
+        <MbldPrompt
+          ms={pendingMbld.ms}
+          attempted={settings.mbldCount}
+          decimals={settings.decimals}
+          onRecord={(result) => {
+            // The scoring rule outranks the clock: under a point is a DNF no
+            // matter how the attempt was timed.
+            const penalty = mbldIsDnf(result) ? 'dnf' : pendingMbld.penalty
+            record(pendingMbld.ms, pendingMbld.memoMs, penalty, result)
+            setPendingMbld(null)
+          }}
+          onDiscard={() => setPendingMbld(null)}
         />
       )}
     </div>

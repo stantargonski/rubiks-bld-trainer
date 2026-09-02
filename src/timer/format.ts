@@ -42,3 +42,58 @@ export function parseTime(text: string): number {
   const ms = (fraction ?? '').slice(0, 3).padEnd(3, '0');
   return (Number(minutes ?? 0) * 60 + Number(seconds)) * 1000 + Number(ms);
 }
+
+/**
+ * The most digits a typed time is allowed to carry: hh mm ss cc.
+ *
+ * Anything past this is a keypress that couldn't have been meant, and silently
+ * dropping it beats letting a stray key turn 12.34 into two hours.
+ */
+export const MAX_ENTRY_DIGITS = 8;
+
+/**
+ * A stream of digits as a time, the way stackmat users type one.
+ *
+ * The digits fill from the right: the last two are hundredths, the next two
+ * seconds, then minutes, then hours. So "1234" is 12.34 and "12345" is 1:23.45,
+ * and nobody has to reach for a colon or a full stop mid-solve.
+ *
+ * NaN for an empty string, which formatTime already renders as an em dash.
+ */
+export function parseDigits(digits: string): number {
+  const clean = digits.replace(/\D/g, '').slice(0, MAX_ENTRY_DIGITS);
+  if (clean === '') return NaN;
+
+  const value = Number(clean);
+  const hundredths = value % 100;
+  const seconds = Math.floor(value / 100) % 100;
+  const minutes = Math.floor(value / 10_000) % 100;
+  const hours = Math.floor(value / 1_000_000);
+
+  return ((hours * 60 + minutes) * 60 + seconds) * 1000 + hundredths * 10;
+}
+
+/**
+ * The same digits as a clock face to type against, padded so the hundredths are
+ * always the last two. Shows "0.00" for nothing typed rather than an empty
+ * space, so the field reads as a clock before it reads as a text box.
+ */
+export function digitsFace(digits: string): string {
+  const clean = digits.replace(/\D/g, '').slice(0, MAX_ENTRY_DIGITS);
+  if (clean === '') return '0.00';
+
+  const padded = clean.padStart(3, '0');
+  const hundredths = padded.slice(-2);
+  const rest = padded.slice(0, -2);            // seconds, then minutes, then hours
+
+  const parts: string[] = [];
+  let head = rest;
+  while (head.length > 2) {
+    parts.unshift(head.slice(-2));
+    head = head.slice(0, -2);
+  }
+  parts.unshift(head);
+
+  // Only the leading group keeps its natural width; the rest are two-digit.
+  return `${parts.join(':')}.${hundredths}`;
+}

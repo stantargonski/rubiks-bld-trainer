@@ -1,6 +1,9 @@
 import { cleanName, cleanScramble, isSaneDate, isSaneMs } from '../data/limits';
 import { DEFAULT_EVENT, isEventId, type EventId } from './events';
-import { emptyTimerStore, type Session, type Solve, type TimerStore } from './types';
+import {
+  emptyTimerStore, type MbldResult, type Session, type Solve, type TimerStore,
+} from './types';
+import { MBLD_MAX, MBLD_MIN } from './settings';
 
 export const TIMER_KEY = 'timer.store.v1';   // storage slot; the version lives inside the JSON
 
@@ -12,7 +15,7 @@ export const TIMER_KEY = 'timer.store.v1';   // storage slot; the version lives 
  * bump that missed one would have had the importer quietly report every solve
  * you own as 'rejected'.
  *
- * Adding a *field* never belongs here 2014 readSolve and migrate fill missing
+ * Adding a *field* never belongs here — readSolve and migrate fill missing
  * fields from defaults, so a new field needs no new version. Add to this list
  * only when the shape of something already stored actually changes, and add
  * rather than replace: the old numbers are what existing installs still hold.
@@ -120,12 +123,39 @@ function readEvent(session: { event?: unknown; mode?: unknown }): EventId {
 function readSolve(value: unknown, sessionEvent: EventId): unknown {
   if (!value || typeof value !== 'object') return value;
   const solve = value as Partial<Solve>;
-  return {
+
+  const built: Record<string, unknown> = {
     ...solve,
     scramble: cleanScramble(solve.scramble),
     memoMs: isSaneMs(solve.memoMs) ? solve.memoMs : null,
     event: isEventId(solve.event) ? solve.event : sessionEvent,
   };
+
+  // Checked rather than carried through on the spread: it arrives from the same
+  // untrusted places everything else here does.
+  const mbld = readMbld(solve.mbld);
+  if (mbld) built.mbld = mbld;
+  else delete built.mbld;
+
+  return built;
+}
+
+/**
+ * A multi-blind result, or undefined if the blob isn't one.
+ *
+ * Bounded by the same cube limits the counter offers, so a hand-edited backup
+ * cannot claim ten thousand cubes and have a stats page try to draw it.
+ */
+function readMbld(value: unknown): MbldResult | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+
+  const { solved, attempted } = value as Partial<MbldResult>;
+  if (typeof solved !== 'number' || typeof attempted !== 'number') return undefined;
+  if (!Number.isInteger(solved) || !Number.isInteger(attempted)) return undefined;
+  if (attempted < MBLD_MIN || attempted > MBLD_MAX) return undefined;
+  if (solved < 0 || solved > attempted) return undefined;
+
+  return { solved, attempted };
 }
 
 function isSolve(value: unknown): value is Solve {

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { formatTime } from './format'
 import { rollingAverages } from './stats'
-import { effectiveMs, type Penalty, type Solve } from './types'
+import { effectiveMs, mbldPoints, type Penalty, type Solve } from './types'
 import { solveLine } from '../data/backup'
 import type { AverageView } from './averageText'
 
@@ -235,6 +235,14 @@ export default function SolveList({
                 {formatTime(effectiveMs(solve), decimals)}
                 {/* Only +2 needs a tag: a DNF already reads DNF in the time column. */}
                 {solve.penalty === 'plus2' && <i className="solve-tag">+2</i>}
+                {/* For multi-blind the cube count is the result and the time is
+                    the tiebreak, so it travels with the time rather than
+                    waiting in the drawer. */}
+                {solve.mbld && (
+                  <i className="solve-tag cubes">
+                    {solve.mbld.solved}/{solve.mbld.attempted}
+                  </i>
+                )}
               </span>
             </button>
 
@@ -318,6 +326,13 @@ export default function SolveList({
               memo {formatTime(solve.memoMs, decimals)}
               {' · '}
               exec {formatTime(solve.ms - solve.memoMs, decimals)}
+            </p>
+          )}
+
+          {solve.mbld && openId === solve.id && !picking && (
+            <p className="solve-split">
+              {mbldPoints(solve.mbld)}{' '}
+              {Math.abs(mbldPoints(solve.mbld)) === 1 ? 'point' : 'points'}
             </p>
           )}
         </li>

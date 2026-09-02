@@ -14,6 +14,39 @@ export interface Solve {
       session, so switching a session's event never re-files the history behind it
       and an all-time best can be asked of the solves themselves. */
   event: EventId;
+  /**
+   * How a multi-blind attempt went. Absent on every other event, and on the
+   * multi-blind solves recorded before this existed.
+   *
+   * Optional rather than a new schema version: the reader fills missing fields
+   * from defaults, so an older store loads unchanged and an older build reading
+   * a newer store simply ignores this.
+   */
+  mbld?: MbldResult;
+}
+
+/** Cubes solved out of cubes attempted, for a multi-blind attempt. */
+export interface MbldResult {
+  solved: number;
+  attempted: number;
+}
+
+/**
+ * WCA points: one for each cube solved, less one for each missed.
+ *
+ * The scoring rule is the whole reason multi-blind has to ask rather than just
+ * time you — the clock says nothing about whether the attempt counted.
+ */
+export function mbldPoints(result: MbldResult): number {
+  return result.solved - (result.attempted - result.solved);
+}
+
+/**
+ * WCA 9f12: an attempt scoring under one point is a DNF, which also catches
+ * solving one cube out of two.
+ */
+export function mbldIsDnf(result: MbldResult): boolean {
+  return mbldPoints(result) < 1;
 }
 
 export interface Session {
@@ -60,8 +93,13 @@ export function newSolve(
   scramble: string,
   event: EventId,
   penalty: Penalty = 'none',
+  mbld?: MbldResult,
 ): Solve {
-  return { id: Date.now(), ms, memoMs, penalty, scramble, event };
+  const solve: Solve = { id: Date.now(), ms, memoMs, penalty, scramble, event };
+  // Set rather than spread as undefined, so a non-multi solve carries no key at
+  // all and round-trips through JSON exactly as it always did.
+  if (mbld) solve.mbld = mbld;
+  return solve;
 }
 
 /**

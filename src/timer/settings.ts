@@ -6,6 +6,14 @@ export type RunningDisplay = 'tenths' | 'seconds' | 'hidden';
 /** What clicking the scramble does. */
 export type ScrambleClick = 'copy' | 'next' | 'none';
 
+/**
+ * Where a solve's time comes from.
+ *
+ * 'typed' is for a stackmat or any other clock that isn't this one: the time
+ * already exists by the time you get here, and the job is only to record it.
+ */
+export type EntryMode = 'timer' | 'typed';
+
 export interface TimerSettings {
   schemaVersion: 2;
   /** How long space must be held before the timer arms. */
@@ -19,6 +27,7 @@ export interface TimerSettings {
   /** WCA 15-second inspection. Blindfolded events and FMC ignore it regardless. */
   inspection: boolean;
   scrambleClick: ScrambleClick;
+  entryMode: EntryMode;
   showScramble: boolean;
   showSolveList: boolean;
   showStats: boolean;
@@ -72,6 +81,7 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   runningDisplay: 'tenths',
   inspection: false,
   scrambleClick: 'copy',
+  entryMode: 'timer',
   showScramble: true,
   showSolveList: true,
   showStats: true,
@@ -152,6 +162,7 @@ export function readTimerSettings(input: unknown): TimerSettings {
         ['copy', 'next', 'none'],
         DEFAULT_TIMER_SETTINGS.scrambleClick,
       ),
+      entryMode: one(parsed.entryMode, ['timer', 'typed'], DEFAULT_TIMER_SETTINGS.entryMode),
       showScramble: bool(parsed.showScramble, true),
       showSolveList: bool(parsed.showSolveList, true),
       showStats: bool(parsed.showStats, true),
