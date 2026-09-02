@@ -169,6 +169,12 @@ export default function CsTimerImport({ store, onImport, onOpenTimer }: CsTimerI
               </li>
             ))}
           </ul>
+
+          {/* The import ends where the solves now are, rather than on a report
+              about them. */}
+          <button type="button" className="ghost" onClick={onOpenTimer}>
+            open the timer
+          </button>
         </div>
       )}
 

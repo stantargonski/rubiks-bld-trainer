@@ -56,23 +56,23 @@ export interface WcaEvent {
  * random-move lengths.
  */
 export const EVENTS: WcaEvent[] = [
-  { id: '333', name: '3x3x3', short: '3x3', size: 3, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 3, length: 20 } },
-  { id: '222', name: '2x2x2', short: '2x2', size: 2, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 2, length: 11 } },
-  { id: '444', name: '4x4x4', short: '4x4', size: 4, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 4, length: 45 } },
-  { id: '555', name: '5x5x5', short: '5x5', size: 5, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 5, length: 60 } },
-  { id: '666', name: '6x6x6', short: '6x6', size: 6, preview: 'nxn', split: false, inspection: true, format: 'mo3', scramble: { kind: 'nxn', size: 6, length: 80 } },
-  { id: '777', name: '7x7x7', short: '7x7', size: 7, preview: 'nxn', split: false, inspection: true, format: 'mo3', scramble: { kind: 'nxn', size: 7, length: 100 } },
-  { id: '333bf', name: '3x3x3 Blindfolded', short: '3BLD', size: 3, preview: 'nxn', split: true, inspection: false, format: 'mo3', scramble: { kind: 'nxnbf', size: 3, length: 20 } },
-  { id: '333oh', name: '3x3x3 One-Handed', short: 'OH', size: 3, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 3, length: 20 } },
-  { id: '333fm', name: '3x3x3 Fewest Moves', short: 'FMC', size: 3, preview: 'nxn', split: false, inspection: false, format: 'mo3', scramble: { kind: 'fmc' } },
+  { id: '333', name: '3x3', short: '3x3', size: 3, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 3, length: 20 } },
+  { id: '222', name: '2x2', short: '2x2', size: 2, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 2, length: 11 } },
+  { id: '444', name: '4x4', short: '4x4', size: 4, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 4, length: 45 } },
+  { id: '555', name: '5x5', short: '5x5', size: 5, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 5, length: 60 } },
+  { id: '666', name: '6x6', short: '6x6', size: 6, preview: 'nxn', split: false, inspection: true, format: 'mo3', scramble: { kind: 'nxn', size: 6, length: 80 } },
+  { id: '777', name: '7x7', short: '7x7', size: 7, preview: 'nxn', split: false, inspection: true, format: 'mo3', scramble: { kind: 'nxn', size: 7, length: 100 } },
+  { id: '333bf', name: '3x3 Blindfolded', short: '3BLD', size: 3, preview: 'nxn', split: true, inspection: false, format: 'mo3', scramble: { kind: 'nxnbf', size: 3, length: 20 } },
+  { id: '333oh', name: '3x3 One-Handed', short: 'OH', size: 3, preview: 'nxn', split: false, inspection: true, format: 'ao5', scramble: { kind: 'nxn', size: 3, length: 20 } },
+  { id: '333fm', name: '3x3 Fewest Moves', short: 'FMC', size: 3, preview: 'nxn', split: false, inspection: false, format: 'mo3', scramble: { kind: 'fmc' } },
   { id: 'clock', name: 'Clock', short: 'Clock', preview: 'none', split: false, inspection: true, format: 'ao5', scramble: { kind: 'clock' } },
   { id: 'minx', name: 'Megaminx', short: 'Minx', preview: 'none', split: false, inspection: true, format: 'ao5', scramble: { kind: 'minx' } },
   { id: 'pyram', name: 'Pyraminx', short: 'Pyra', preview: 'none', split: false, inspection: true, format: 'ao5', scramble: { kind: 'pyram' } },
   { id: 'skewb', name: 'Skewb', short: 'Skewb', preview: 'none', split: false, inspection: true, format: 'ao5', scramble: { kind: 'skewb' } },
   { id: 'sq1', name: 'Square-1', short: 'Sq-1', preview: 'none', split: false, inspection: true, format: 'ao5', scramble: { kind: 'sq1' } },
-  { id: '444bf', name: '4x4x4 Blindfolded', short: '4BLD', size: 4, preview: 'nxn', split: true, inspection: false, format: 'mo3', scramble: { kind: 'nxnbf', size: 4, length: 40 } },
-  { id: '555bf', name: '5x5x5 Blindfolded', short: '5BLD', size: 5, preview: 'nxn', split: true, inspection: false, format: 'mo3', scramble: { kind: 'nxnbf', size: 5, length: 60 } },
-  { id: '333mbf', name: '3x3x3 Multi-Blind', short: 'MBLD', size: 3, preview: 'none', split: true, inspection: false, format: 'mo3', scramble: { kind: 'mbf', count: 3 } },
+  { id: '444bf', name: '4x4 Blindfolded', short: '4BLD', size: 4, preview: 'nxn', split: true, inspection: false, format: 'mo3', scramble: { kind: 'nxnbf', size: 4, length: 40 } },
+  { id: '555bf', name: '5x5 Blindfolded', short: '5BLD', size: 5, preview: 'nxn', split: true, inspection: false, format: 'mo3', scramble: { kind: 'nxnbf', size: 5, length: 60 } },
+  { id: '333mbf', name: '3x3 Multi-Blind', short: 'MBLD', size: 3, preview: 'none', split: true, inspection: false, format: 'mo3', scramble: { kind: 'mbf', count: 3 } },
 ];
 
 const BY_ID = new Map(EVENTS.map((event) => [event.id, event]));

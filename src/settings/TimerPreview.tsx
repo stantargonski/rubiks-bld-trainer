@@ -32,7 +32,7 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
                 </div>
               )}
               <div className="rail-head">
-                <span className="session-select">3x3x3</span>
+                <span className="session-select">3x3</span>
               </div>
               {settings.showSolveList && (
                 <div className="rail-list">
@@ -62,7 +62,7 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
             {settings.showScramble && (
               <div className="scramble-bar">
                 <div className="scramble-head">
-                  <span className="event-picker">3x3x3</span>
+                  <span className="event-picker">3x3</span>
                   <span className="scramble-nav">
                     <span>‹ last</span>
                     <span>next ›</span>
