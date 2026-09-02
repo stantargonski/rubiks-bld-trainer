@@ -12,6 +12,8 @@ import SessionPicker from './SessionPicker'
 import SolveList from './SolveList'
 import StatsPanel from './StatsPanel'
 import CompBar from './CompBar'
+import AverageDetail from './AverageDetail'
+import type { AverageView } from './averageText'
 import type { Dispatch, SetStateAction } from 'react'
 import { DEFAULT_TIMER_SETTINGS, type TimerSettings } from './settings'
 import { average } from './stats'
@@ -48,6 +50,8 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   // effect racing the render that caused it.
   const [round, setRound] = useState<Round | null>(null)
   const [compTarget, setCompTarget] = useState('')
+  /** The average whose solves are open for reading, or null. */
+  const [detail, setDetail] = useState<AverageView | null>(null)
 
   // Derived every render — never mirrored into state of its own.
   const session = activeSession(store)
@@ -212,7 +216,12 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
         <aside className="timer-rail">
           {settings.showStats && (
             <div className="rail-stats">
-              <StatsPanel solves={solves} decimals={settings.decimals} event={event} />
+              <StatsPanel
+                solves={solves}
+                decimals={settings.decimals}
+                event={event}
+                onOpenAverage={(label, window) => setDetail({ label, solves: window })}
+              />
             </div>
           )}
 
@@ -235,6 +244,7 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
                 decimals={settings.decimals}
                 onPenalty={setPenalty}
                 onDelete={deleteSolve}
+                onOpenAverage={(label, window) => setDetail({ label, solves: window })}
               />
             </div>
           )}
@@ -315,8 +325,28 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
                 an average you can't change yet is the definition of a distraction. */}
             {settings.showAverages && !timing && (
               <div className="averages">
-                <span>ao5 <b>{formatTime(average(solves, 5), settings.decimals)}</b></span>
-                <span>ao12 <b>{formatTime(average(solves, 12), settings.decimals)}</b></span>
+                {[5, 12].map((size) => {
+                  const value = average(solves, size)
+                  return (
+                    <span key={size}>
+                      ao{size}{' '}
+                      <b>
+                        <button
+                          type="button"
+                          className="ao-open"
+                          // Nothing to open before there are enough solves for
+                          // the average to exist.
+                          disabled={Number.isNaN(value)}
+                          onClick={() => setDetail({
+                            label: `ao${size}`, solves: solves.slice(-size),
+                          })}
+                        >
+                          {formatTime(value, settings.decimals)}
+                        </button>
+                      </b>
+                    </span>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -346,6 +376,15 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
           />
         )}
       </div>
+
+      {detail && (
+        <AverageDetail
+          label={detail.label}
+          solves={detail.solves}
+          decimals={settings.decimals}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   )
 }

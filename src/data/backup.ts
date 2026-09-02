@@ -236,14 +236,18 @@ function seconds(ms: number | null): string {
 }
 
 /**
- * One session as a spreadsheet. Penalty and raw time are kept in separate
+ * Any run of solves as a spreadsheet. Penalty and raw time are kept in separate
  * columns from the effective one, so the arithmetic behind an average stays
  * visible instead of being baked in.
+ *
+ * Takes solves rather than a session so that a single average exports in exactly
+ * the columns the session it came out of does — one format to learn, and one
+ * place it is written.
  */
-export function sessionCsv(session: Session): string {
+export function solvesCsv(solves: Solve[]): string {
   const rows = [
     ['no', 'event', 'time', 'penalty', 'effective', 'memo', 'exec', 'date', 'scramble'],
-    ...session.solves.map((solve, index) => [
+    ...solves.map((solve, index) => [
       String(index + 1),
       solve.event,
       seconds(solve.ms),
@@ -256,6 +260,11 @@ export function sessionCsv(session: Session): string {
     ]),
   ];
   return rows.map((row) => row.map(csvCell).join(',')).join('\n');
+}
+
+/** One whole session, in those same columns. */
+export function sessionCsv(session: Session): string {
+  return solvesCsv(session.solves);
 }
 
 /**

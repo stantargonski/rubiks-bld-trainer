@@ -12,6 +12,9 @@
 import { clockPhase, clockText, isInspecting, penaltyFor } from '../src/timer/display';
 import { INSPECT_DNF_MS, INSPECT_MS } from '../src/timer/useTimer';
 import { formatTime } from '../src/timer/format';
+import { averageText } from '../src/timer/averageText';
+import { sessionCsv, solvesCsv } from '../src/data/backup';
+import { newSession, type Solve } from '../src/timer/types';
 
 const failures: string[] = [];
 
@@ -86,6 +89,53 @@ check(clockPhase('holding', 0) === 'holding', 'holding looks holding');
 check(clockPhase('inspecting', 1000) === 'inspecting', 'a healthy countdown looks normal');
 check(clockPhase('inspecting', INSPECT_MS) === 'over', 'a countdown past fifteen looks wrong');
 check(clockPhase('inspecting', INSPECT_DNF_MS) === 'over', 'and past seventeen too');
+
+// ---- the CSV, and the block an average copies out as ----
+
+/** A run of solves with known times, so the text they produce is known too. */
+function solvesOf(times: number[]): Solve[] {
+  return times.map((ms, index) => ({
+    id: 1_700_000_000_000 + index * 60_000,
+    ms,
+    memoMs: null,
+    penalty: 'none' as const,
+    scramble: `R U R' scramble ${index + 1}`,
+    event: '333' as const,
+  }));
+}
+
+const sample = solvesOf([12_340, 15_010, 13_500, 11_020, 14_770]);
+const session = { ...newSession('test'), solves: sample };
+
+// sessionCsv delegates to solvesCsv now. The point of the split is that it
+// changed nothing about what a session exports.
+check(
+  sessionCsv(session) === solvesCsv(sample),
+  'a session exports exactly what its solves export',
+);
+check(
+  sessionCsv(session).split('\n').length === sample.length + 1,
+  'the CSV is a header plus one row per solve',
+);
+check(
+  sessionCsv(session).startsWith('no,event,time,penalty,effective,memo,exec,date,scramble'),
+  'the CSV columns are unchanged',
+);
+
+const block = averageText('ao5', sample, 2);
+const lines = block.split('\n');
+
+check(lines[0] === 'ao5: 13.53', `the block leads with the average, got "${lines[0]}"`);
+check(lines[1] === '', 'a blank line separates the average from its solves');
+check(lines.length === sample.length + 2, 'one line per solve, in the order they happened');
+// An ao5 trims one from each end: the 11.02 and the 15.01, and nothing else.
+check(
+  lines.filter((line) => line.includes('(')).length === 2,
+  'exactly the trimmed pair is bracketed',
+);
+check(lines[5].includes('(11.02)'), 'the best of the five is bracketed as trimmed');
+check(lines[3].includes('(15.01)'), 'the worst of the five is bracketed as trimmed');
+check(lines[2].includes("R U R' scramble 1"), 'each line carries its own scramble');
 
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} failure(s):`);

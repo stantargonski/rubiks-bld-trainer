@@ -9,6 +9,8 @@ import TimeChart from './charts/TimeChart'
 import Histogram from './charts/Histogram'
 import SummaryTiles from './charts/SummaryTiles'
 import ActivityHeatmap from './charts/ActivityHeatmap'
+import AverageDetail from './AverageDetail'
+import type { AverageView } from './averageText'
 import { DAY, RANGES, SPANS, type Range } from './charts/ranges'
 
 /** The three the header calls out. Everything else lives in the per-event table. */
@@ -27,6 +29,8 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
   /** `all`, an `e:<event>` or an `s:<session>` — one control over two kinds of thing. */
   const [filter, setFilter] = useState('all')
   const [span, setSpan] = useState(0)
+  /** The average whose solves are open for reading, or null. */
+  const [detail, setDetail] = useState<AverageView | null>(null)
 
   /**
    * "Now", read once when the page opens rather than on every render.
@@ -209,7 +213,12 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
           </div>
         </div>
 
-        <SummaryTiles solves={session.solves} decimals={decimals} event={event} />
+        <SummaryTiles
+          solves={session.solves}
+          decimals={decimals}
+          event={event}
+          onOpenAverage={(label, window) => setDetail({ label, solves: window })}
+        />
 
         <h3 className="chart-title">
           every solve
@@ -251,6 +260,15 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
         </h3>
         <Histogram solves={windowed} decimals={decimals} />
       </section>
+
+      {detail && (
+        <AverageDetail
+          label={detail.label}
+          solves={detail.solves}
+          decimals={decimals}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   )
 }

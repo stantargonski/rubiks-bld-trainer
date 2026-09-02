@@ -911,6 +911,46 @@ textarea,
 .solve-row:hover {
   background: var(--panel-2);
 }
+/* The row is no longer one button: the two average columns open the average,
+   and the number and the time open the solve. This is that second target,
+   laid out over the first two of the row's four columns so the grid is still
+   the thing deciding where the columns are. */
+.solve-open {
+  grid-column: 1 / span 2;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+/* A heading you can sort by. Styled as the heading it already was — the arrow
+   is what says it is doing something. */
+.solve-sort {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+.solve-sort:hover {
+  color: var(--text);
+}
+.solve-sort.on {
+  color: var(--accent);
+}
+.solve-sort i {
+  margin-left: 3px;
+  font-size: 0.8em;
+  font-style: normal;
+}
 .solve-n {
   color: var(--text-dim);
   font-size: calc(14px * var(--font-scale));
@@ -2326,4 +2366,113 @@ textarea,
    average you cannot change yet is the definition of a distraction. */
 .timer-frame.solving .stage-clock .averages {
   opacity: 0;
+}
+
+/* ----- average detail ----- */
+/* A number worth clicking should say so without becoming a button: these are
+   figures in a table and a line under the clock, not controls. */
+.ao-open {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+}
+.ao-open:hover {
+  text-decoration-color: var(--accent);
+}
+.ao-open:disabled {
+  text-decoration: none;
+  cursor: default;
+}
+
+.modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(3px);
+}
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(720px, 100%);
+  max-height: min(680px, 100%);
+  padding: 18px 20px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.modal-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.modal-title b {
+  color: var(--text);
+  font-size: calc(26px * var(--font-scale));
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+/* Monospaced because the block is columns — the numbers only line up if every
+   character is the same width. */
+.modal-text {
+  flex: 1;
+  min-height: 240px;
+  padding: 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, 'JetBrains Mono', 'Roboto Mono', monospace;
+  font-size: calc(13px * var(--font-scale));
+  line-height: 1.55;
+  white-space: pre;
+  overflow: auto;
+  resize: none;
+}
+.modal-text:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.modal-actions button {
+  padding: 7px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 700;
+}
+.modal-actions button:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+/* ok is what you came to press once you have the text. */
+.modal-actions button:first-child {
+  margin-right: auto;
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
 }
