@@ -16,7 +16,17 @@ export default function EventPicker({ value, onChange }: EventPickerProps) {
   return (
     <label className="event-picker">
       <span className="visually-hidden">event</span>
-      <select value={value} onChange={(event) => onChange(event.target.value as EventId)}>
+      <select
+        value={value}
+        onChange={(event) => {
+          // Handing focus back before the change lands. A focused <select> makes
+          // useTimer stand down — it will not read a key aimed at a control you
+          // can type into — so leaving it focused costs you the next space press,
+          // which is the one you meant to start the solve with.
+          event.currentTarget.blur()
+          onChange(event.target.value as EventId)
+        }}
+      >
         {EVENTS.map((event) => (
           <option key={event.id} value={event.id}>{event.name}</option>
         ))}

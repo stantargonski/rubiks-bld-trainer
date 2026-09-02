@@ -54,7 +54,12 @@ export default function SessionPicker({
       <select
         className="session-select"
         value={activeId}
-        onChange={(event) => onSelect(event.target.value)}
+        onChange={(event) => {
+          // Same reason as the event picker: a select that keeps focus eats the
+          // next space press instead of arming the timer.
+          event.currentTarget.blur()
+          onSelect(event.target.value)
+        }}
       >
         {sessions.map((session) => (
           <option key={session.id} value={session.id}>

@@ -57,6 +57,21 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   const options = { mbldCount: settings.mbldCount }
   const [scrambles, setScrambles] = useState<Scramble[]>(() => [scrambleFor(event, options)])
   const [index, setIndex] = useState(0)
+  /** The event the queue in `scrambles` was built for. */
+  const [builtFor, setBuiltFor] = useState(session.event)
+
+  // The session owns the event, so switching sessions switches the puzzle out
+  // from under the queue — and a 4x4 scramble left over from the last session is
+  // not a scramble, it is a wrong answer. Rebuilt during the render that noticed
+  // rather than from an effect a frame later, which would paint the old puzzle's
+  // scramble first. This is also the only path the event picker needs: it writes
+  // the session's event and the queue follows.
+  if (builtFor !== session.event) {
+    setBuiltFor(session.event)
+    setScrambles([scrambleFor(event, options)])
+    setIndex(0)
+  }
+
   const scramble = scrambles[index]
 
   // The 2x2 needs a table built before it can give real random-state scrambles.
@@ -88,9 +103,10 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   }
 
   function setEvent(id: EventId) {
+    // The queue is not touched here: writing the session's event is what starts
+    // it over, above, and that is the same path a session switch takes. Which
+    // also means the choice is remembered — it is stored on the session.
     updateActive((item) => ({ ...item, event: id }))
-    // A queued 4x4 scramble is meaningless on a Pyraminx. Start over.
-    restart(eventOf(id))
   }
 
   /** Throws away the queue and starts a fresh one for `next`. */
