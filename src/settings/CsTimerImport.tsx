@@ -169,9 +169,6 @@ export default function CsTimerImport({ store, onImport, onOpenTimer }: CsTimerI
               </li>
             ))}
           </ul>
-          <button type="button" className="cstimer-go" onClick={onOpenTimer}>
-            open them in the timer
-          </button>
         </div>
       )}
 

@@ -102,7 +102,7 @@ export default function StatsPage({ store, decimals }: StatsPageProps) {
             <strong className="header-figure">{practised.length}</strong>
           </div>
           <div>
-            <span className="header-label">time solving</span>
+            <span className="header-label">time spent solving</span>
             <strong className="header-figure">{durationText(totalTime(everySolve))}</strong>
           </div>
         </div>

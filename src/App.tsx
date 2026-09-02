@@ -128,7 +128,7 @@ export default function App() {
       <div className="app-bg" />
 
       <header className="topbar">
-       <span className="brand">Training Utils</span>
+       <span className="brand">tstimer</span>
        <nav className="nav">
         {SECTIONS.map((item) => (
           <button
