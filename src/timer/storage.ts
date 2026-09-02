@@ -1,3 +1,4 @@
+import { cleanName, cleanScramble, isSaneDate, isSaneMs } from '../data/limits';
 import { DEFAULT_EVENT, isEventId, type EventId } from './events';
 import { emptyTimerStore, type Session, type Solve, type TimerStore } from './types';
 
@@ -49,7 +50,7 @@ export function migrate(input: unknown): TimerStore {
       const event = readEvent(session);
       return {
         id: session.id,
-        name: typeof session.name === 'string' && session.name !== '' ? session.name : 'Session',
+        name: cleanName(session.name, 'Session'),
         event,
         createdAt: typeof session.createdAt === 'number' ? session.createdAt : 0,
         solves: Array.isArray(session.solves)
@@ -81,8 +82,8 @@ function readSolve(value: unknown, sessionEvent: EventId): unknown {
   const solve = value as Partial<Solve>;
   return {
     ...solve,
-    memoMs:
-      typeof solve.memoMs === 'number' && Number.isFinite(solve.memoMs) ? solve.memoMs : null,
+    scramble: cleanScramble(solve.scramble),
+    memoMs: isSaneMs(solve.memoMs) ? solve.memoMs : null,
     event: isEventId(solve.event) ? solve.event : sessionEvent,
   };
 }
@@ -91,10 +92,13 @@ function isSolve(value: unknown): value is Solve {
   const solve = value as Partial<Solve> | null;
   return (
     !!solve &&
-    typeof solve.id === 'number' &&
-    typeof solve.ms === 'number' &&
-    Number.isFinite(solve.ms) &&
-    (solve.memoMs === null || typeof solve.memoMs === 'number') &&
+    // Bounded, not merely typed: an id is a timestamp and a chart's x axis, and
+    // a time is every average downstream of it, so a hand-edited backup or a
+    // corrupt slot can't put a year-275760 date or a fortnight-long solve where
+    // a formatter has to draw it.
+    isSaneDate(solve.id) &&
+    isSaneMs(solve.ms) &&
+    (solve.memoMs === null || isSaneMs(solve.memoMs)) &&
     (solve.penalty === 'none' || solve.penalty === 'plus2' || solve.penalty === 'dnf') &&
     typeof solve.scramble === 'string' &&
     isEventId(solve.event)
