@@ -5,10 +5,12 @@ library for 3BLD, and the 21 PLL cases with algs for your to learn or practice.
 
 **[Link to Page](https://stantargonski.github.io/tstimer/)**
 
+
 ## Demo
 
 Add demo videos
 
+| | |
 |---|---|
 | **Timing a solve** | Space to arm, release to start, any key to stop — with 15-second inspection and the +2 / DNF cutoffs. |
 | **Blindfolded** | The memo split: one keypress ends memo and starts execution, and both halves land in the solve list. |
