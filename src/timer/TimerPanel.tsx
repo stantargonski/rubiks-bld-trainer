@@ -243,18 +243,17 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
               timer, and putting them here keeps them still while the list
               above them grows. */}
           <div className="rail-tools">
-            <button
-              type="button"
-              className="rail-tool"
-              aria-pressed={openRound !== null}
-              onClick={openRound ? () => setRound(null) : startRound}
-            >
+            {/* Neither carries a pressed state. Both act on the thing they name
+                and the thing they name is already on screen saying so — a lit
+                button is a second, slower answer to a question the stage has
+                already answered. Comp sim starts a round; the round's own × is
+                what ends it. */}
+            <button type="button" className="rail-tool" onClick={startRound}>
               🏁 comp sim
             </button>
             <button
               type="button"
               className="rail-tool"
-              aria-pressed={settings.showCubeNet}
               onClick={() => onSettings({ ...settings, showCubeNet: !settings.showCubeNet })}
             >
               🧊 preview
@@ -279,24 +278,28 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
           </ScrambleBanner>
         )}
 
-        {/* Both of these live in the stage rather than in this column, so they
-            centre on the window rather than on the space the rail leaves. */}
-        <div className="timer-stage">
-          {openRound && (
-            <div className="stage-top">
-              <CompBar
-                format={format}
-                times={roundTimes}
-                targetText={compTarget}
-                onTargetText={setCompTarget}
-                suggestion={suggestTarget(recent)}
-                decimals={settings.decimals}
-                onRestart={startRound}
-                onClose={() => setRound(null)}
-              />
-            </div>
-          )}
+        {/* Docked under the scramble, in this column's flow. It used to sit above
+            the clock inside the stage, which meant opening a round pushed the
+            clock down the screen — the one element on the page whose position
+            should never depend on what else is showing. */}
+        {openRound && (
+          <div className="comp-dock">
+            <CompBar
+              format={format}
+              times={roundTimes}
+              targetText={compTarget}
+              onTargetText={setCompTarget}
+              suggestion={suggestTarget(recent)}
+              decimals={settings.decimals}
+              onRestart={startRound}
+              onClose={() => setRound(null)}
+            />
+          </div>
+        )}
 
+        {/* The clock lives in the stage rather than in this column, so it centres
+            on the window rather than on the space the rail leaves. */}
+        <div className="timer-stage">
           <div className="stage-clock">
             <div className={`clock ${clockPhase(phase, inspectMs)}`}>{face}</div>
 

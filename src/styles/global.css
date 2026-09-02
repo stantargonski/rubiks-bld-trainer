@@ -841,11 +841,6 @@ textarea,
   color: var(--text);
   border-color: var(--text-dim);
 }
-.rail-tool[aria-pressed='true'] {
-  background: var(--accent);
-  border-color: transparent;
-  color: var(--accent-ink);
-}
 
 
 
@@ -1132,15 +1127,15 @@ textarea,
   align-items: center;
   gap: 10px;
 }
-/* In the stage's flow rather than pinned to a fixed offset: the scramble bar
-   above is one line for a 3x3 and seven for a megaminx, so any fixed top would
-   sit on top of it for half the events. As a flex child it shares the clock's
-   centre line — which is the point — and the pair simply centres as a group. */
-.stage-top {
+/* Under the scramble, in the main column's flow rather than in the stage. The
+   stage is what centres the clock on the window, and anything sharing it pushes
+   the clock around — so the round's bar sits below the thing it belongs with
+   instead, and the clock does not move when a round opens. */
+.comp-dock {
+  flex: none;
   display: flex;
   justify-content: center;
-  width: 100%;
-  margin-bottom: 6px;
+  padding: 10px 20px 0;
 }
 .clock {
   font-family: var(--font-timer);
