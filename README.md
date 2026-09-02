@@ -1,75 +1,32 @@
-# React + TypeScript + Vite
+# tstimer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A speedcubing timer and memo trainer for 3BLD and CFOP trainer. Scrambles for all 17 WCA events, a Speffz letter-pair
+library for 3BLD, and the 21 PLL cases with algs for your to learn or practice.
 
-Currently, two official plugins are available:
+**[Link to Page](https://stantargonski.github.io/tstimer/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Demo
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Add demo videos
 
-## Expanding the ESLint configuration
+| | |
+|---|---|
+| **Timing a solve** | Space to arm, release to start, any key to stop — with 15-second inspection and the +2 / DNF cutoffs. |
+| **Blindfolded** | The memo split: one keypress ends memo and starts execution, and both halves land in the solve list. |
+| **Stats** | Sessions, ao5 / ao12 / ao100, the time-of-day heatmap and the histogram. |
+| **3BLD letter pairs** | Fill mode walking the whole Speffz set, one pair at a time. |
+| **Appearance** | Themes, fonts, a background picture, and the panel opacity / blur sliders. |
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+*Clips pending — the table above is the shot list.*
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Running it locally
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
