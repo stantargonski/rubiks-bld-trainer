@@ -2384,8 +2384,13 @@ textarea,
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
-.bench-strip .bench:first-of-type {
-  margin-left: auto;
+/* The push goes on the title, not on the first figure. It used to sit on
+   `.bench:first-of-type`, which meant that with no events chosen there was no
+   element for the rule to attach to and the edit button fell back to the left —
+   so the one control here moved depending on whether there was anything to the
+   left of it. */
+.bench-title {
+  margin-right: auto;
 }
 .bench-edit {
   margin-left: 24px;
@@ -2439,57 +2444,73 @@ textarea,
 }
 
 /* ----- activity heatmap ----- */
-.activity-scroll {
+/* One cell and one gap, named once. The weekday labels are a column of rows on
+   this same rhythm, so they line up with the squares by construction — they
+   used to be three labels spaced by a hand-tuned gap, which silently came apart
+   the moment a square changed size. */
+.activity {
+  --cell: 13px;
+  --cell-gap: 3px;
+  --month-label: 18px;
+}
+.activity-body {
   display: flex;
   gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  min-width: 0;
 }
-/* Only three of the seven rows are labelled, so the labels are positioned to
-   line up with Monday, Wednesday and Friday rather than evenly spaced. */
+/* Outside the scroller, so it stays put while the months scroll past it. */
 .activity-days {
   flex: none;
   display: flex;
   flex-direction: column;
-  /* Labelled rows are Monday, Wednesday and Friday — every other row, so the
-     gap spans two 16px rows less the height of the label itself. */
-  gap: 20px;
-  /* Clears the row of month labels above the grid, so the weekday labels still
-     line up with the rows they name. */
-  padding-top: 19px;
+  gap: var(--cell-gap);
+  padding-top: var(--month-label);
   color: var(--text-dim);
   font-size: 12px;
-  line-height: 12px;
   text-align: right;
 }
+.activity-days span {
+  height: var(--cell);
+  line-height: var(--cell);
+}
+.activity-scroll {
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+/* The same gap between months as between the weeks inside them, so the seven
+   weekday rows run unbroken across the whole strip. A month reads as a month
+   because of the label above it and the notch where its first week starts —
+   not because a divider was drawn between two otherwise identical grids. */
 .activity-grid {
   display: flex;
-  gap: 3px;
-  padding-top: 18px;
+  gap: var(--cell-gap);
+  padding-top: var(--month-label);
+  width: max-content;
 }
-.activity-week {
+.activity-month-block {
   position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  gap: var(--cell-gap);
 }
-/* A visible break between months, so a year reads as twelve stretches rather
-   than as one undifferentiated strip. */
-.activity-week.month-start {
-  margin-left: 9px;
+.activity-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
 }
 .activity-month {
   position: absolute;
-  top: -18px;
+  top: calc(var(--month-label) * -1);
   left: 0;
   color: var(--text-dim);
   font-size: 11px;
   line-height: 12px;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 .activity-cell {
-  width: 13px;
-  height: 13px;
+  width: var(--cell, 13px);
+  height: var(--cell, 13px);
   border-radius: 3px;
   background: var(--fill-0);
 }
@@ -2926,4 +2947,16 @@ textarea,
 .solve-tag.cubes {
   color: var(--text-dim);
   font-weight: 800;
+}
+
+/* ----- the mean, on the histogram ----- */
+.mean-line line {
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.75;
+}
+.mean-line text {
+  fill: var(--text);
+  font-weight: 700;
 }

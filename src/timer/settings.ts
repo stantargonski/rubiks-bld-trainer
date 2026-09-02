@@ -1,4 +1,5 @@
 import { isEventId, type EventId } from './events';
+import { DEFAULT_STAT_TILES } from './charts/tiles';
 
 /** What the clock shows while a solve is actually running. */
 export type RunningDisplay = 'tenths' | 'seconds' | 'hidden';
@@ -61,6 +62,19 @@ export interface TimerSettings {
    * the one practising Square-1.
    */
   benchEvents: EventId[];
+  /**
+   * The stats-page boxes, in the order they are drawn.
+   *
+   * Holds every box, shown or not — which is why the hidden ones need a list of
+   * their own. If this were "the visible ones", a box switched off would be
+   * indistinguishable from a box this build has only just added, and the reader
+   * could not both re-show new boxes and respect a box you hid.
+   */
+  statTiles: string[];
+  /** Which of them are switched off. */
+  statTilesOff: string[];
+  /** The vertical line at the mean on the histogram. */
+  showHistogramMean: boolean;
 }
 
 /**
@@ -98,6 +112,9 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   previewBottom: 16,
   mbldCount: 3,
   benchEvents: DEFAULT_BENCH_EVENTS,
+  statTiles: DEFAULT_STAT_TILES,
+  statTilesOff: [],
+  showHistogramMean: true,
 };
 
 export const TIMER_SETTINGS_KEY = 'timer.settings.v1';
@@ -185,6 +202,9 @@ export function readTimerSettings(input: unknown): TimerSettings {
       previewBottom: clamp(parsed.previewBottom, PREVIEW_MARGIN, 4000, DEFAULT_TIMER_SETTINGS.previewBottom),
       mbldCount: clamp(parsed.mbldCount, MBLD_MIN, MBLD_MAX, DEFAULT_TIMER_SETTINGS.mbldCount),
       benchEvents: events(parsed.benchEvents),
+      statTiles: tileOrder(parsed.statTiles),
+      statTilesOff: knownTiles(parsed.statTilesOff),
+      showHistogramMean: bool(parsed.showHistogramMean, true),
     };
   } catch {
     return DEFAULT_TIMER_SETTINGS;
@@ -223,4 +243,38 @@ function one<T extends string>(value: unknown, allowed: T[], fallback: T): T {
 function clamp(value: unknown, min: number, max: number, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
   return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+/** Whichever of `value` are ids this build knows, in the order given, no repeats. */
+function knownTiles(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  const known = new Set(DEFAULT_STAT_TILES);
+  const seen = new Set<string>();
+  const kept: string[] = [];
+
+  for (const id of value) {
+    if (typeof id === 'string' && known.has(id) && !seen.has(id)) {
+      seen.add(id);
+      kept.push(id);
+    }
+  }
+  return kept;
+}
+
+/**
+ * A saved box order, brought up to date with this build.
+ *
+ * Unknown ids are dropped — a box removed since the layout was saved. Ids this
+ * build has that the layout doesn't are appended rather than left out, so a box
+ * added by an update turns up at the end instead of being invisible forever to
+ * everyone who had already arranged their stats page once.
+ */
+function tileOrder(value: unknown): string[] {
+  if (!Array.isArray(value)) return [...DEFAULT_STAT_TILES];
+
+  const kept = knownTiles(value);
+  const seen = new Set(kept);
+  for (const id of DEFAULT_STAT_TILES) if (!seen.has(id)) kept.push(id);
+  return kept;
 }

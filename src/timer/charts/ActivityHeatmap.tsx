@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { dayCounts, dayKey } from '../stats'
 import type { Solve } from '../types'
 import { DAY, type Range } from './ranges'
@@ -10,21 +10,32 @@ import { DAY, type Range } from './ranges'
  * often", which is the question the others quietly depend on. A month-long gap
  * explains a flat average better than any statistic about the solves themselves.
  *
- * Laid out in columns of weeks running left to right, weekdays down — the shape
- * everyone already knows how to read.
+ * Laid out a month to a block, each block exactly as many columns wide as that
+ * month needs, with the 1st sitting on its real weekday. The blocks butt up
+ * against each other on the same rhythm as the weeks inside them, so the seven
+ * weekday rows run unbroken across the whole strip and a month boundary shows
+ * as the notch where one month's last week meets the next month's first.
  */
 
-const WEEKDAYS = ['monday', 'wednesday', 'friday'];
+/** Monday first, to match the row order. Blanks are the rows that go unlabelled. */
+const WEEKDAYS = ['mon', '', 'wed', '', 'fri', '', ''];
 
 const MONTHS = [
   'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
 ];
 
-/** One column of the grid: a week of days, and the month it opens if it opens one. */
-interface Week {
-  days: { key: string; count: number; date: Date }[];
-  /** The month name to print above this column, or null to print nothing. */
-  month: string | null;
+/** One square. `count` of -1 means there is no day here to colour. */
+interface Cell {
+  key: string;
+  count: number;
+  label: string | null;
+}
+
+interface MonthBlock {
+  key: string;
+  label: string;
+  /** Weeks, each exactly seven cells, Monday first. */
+  columns: Cell[][];
 }
 
 interface ActivityHeatmapProps {
@@ -41,8 +52,15 @@ function startOfDay(when: number): Date {
   return date;
 }
 
+/** 0 = Monday. JS starts its week on Sunday; the grid does not. */
+function weekdayOf(date: Date): number {
+  return (date.getDay() + 6) % 7;
+}
+
 export default function ActivityHeatmap({ solves, range, now }: ActivityHeatmapProps) {
-  const { weeks, total, busiest } = useMemo(() => {
+  const scroller = useRef<HTMLDivElement>(null);
+
+  const { months, total, busiest } = useMemo(() => {
     const counts = dayCounts(solves);
 
     const today = startOfDay(now);
@@ -53,48 +71,77 @@ export default function ActivityHeatmap({ solves, range, now }: ActivityHeatmapP
       : today;
 
     const from = range === 0
-      ? new Date(Math.min(earliest.getTime(), today.getTime() - 27 * DAY))
-      : new Date(today.getTime() - (range - 1) * DAY);
+      ? startOfDay(Math.min(earliest.getTime(), today.getTime() - 27 * DAY))
+      : startOfDay(today.getTime() - (range - 1) * DAY);
 
-    // Back up to the Monday on or before the start, so every column is a full week.
-    const start = startOfDay(from.getTime());
-    const weekday = (start.getDay() + 6) % 7;          // 0 = Monday
-    start.setDate(start.getDate() - weekday);
-
-    const columns: Week[] = [];
+    const blocks: MonthBlock[] = [];
     let running = 0;
     let peak = 0;
-    /** The month the previous column opened in, so a change of it is a boundary. */
-    let lastMonth = -1;
 
-    for (let cursor = new Date(start); cursor <= today;) {
-      const days: Week['days'] = [];
+    // Whole months, always. A block that stopped halfway would be the one shape
+    // on this chart that isn't a month, which is the thing it is meant to show.
+    // Days outside the chosen range are drawn as absent rather than as empty,
+    // so widening the range adds squares instead of recolouring them.
+    const cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+    const last = new Date(today.getFullYear(), today.getMonth(), 1);
 
-      for (let day = 0; day < 7; day += 1) {
-        const date = new Date(cursor);
+    while (cursor <= last) {
+      const year = cursor.getFullYear();
+      const month = cursor.getMonth();
+      const first = new Date(year, month, 1);
+      // Day 0 of the next month is the last day of this one.
+      const length = new Date(year, month + 1, 0).getDate();
+
+      const cells: Cell[] = [];
+      const blank = (at: number): Cell => (
+        { key: `${year}-${month}-blank-${at}`, count: -1, label: null }
+      );
+
+      // Lead-in, so the 1st lands on its own weekday row.
+      for (let at = 0; at < weekdayOf(first); at += 1) cells.push(blank(cells.length));
+
+      for (let day = 1; day <= length; day += 1) {
+        const date = new Date(year, month, day);
         const key = dayKey(date.getTime());
-        // Days after today are drawn as gaps, not as zero-activity days.
-        const count = date > today ? -1 : (counts.get(key) ?? 0);
+        const inRange = date >= from && date <= today;
+        const count = inRange ? (counts.get(key) ?? 0) : -1;
 
-        days.push({ key, count, date });
+        cells.push({ key, count, label: key });
         if (count > 0) {
           running += count;
           peak = Math.max(peak, count);
         }
-        cursor.setDate(cursor.getDate() + 1);
       }
 
-      // Read off the Monday the column starts on: a month that begins midweek
-      // belongs to the column that first shows a day of it, which is this one.
-      // The first column is never a boundary — there is nothing before it to be
-      // a boundary from, and a gap at the left edge reads as a missing week.
-      const month = days[0].date.getMonth();
-      columns.push({ days, month: month === lastMonth ? null : MONTHS[month] });
-      lastMonth = month;
+      // Pad to a whole number of weeks so every column is seven tall.
+      while (cells.length % 7 !== 0) cells.push(blank(cells.length));
+
+      const columns: Cell[][] = [];
+      for (let at = 0; at < cells.length; at += 7) columns.push(cells.slice(at, at + 7));
+
+      blocks.push({
+        key: `${year}-${month}`,
+        // The year rides along on January and on the opening block, which is
+        // the only place a bare month name would be ambiguous.
+        label: month === 0 || blocks.length === 0
+          ? `${MONTHS[month]} ’${String(year).slice(2)}`
+          : MONTHS[month],
+        columns,
+      });
+
+      cursor.setMonth(cursor.getMonth() + 1);
     }
 
-    return { weeks: columns, total: running, busiest: peak };
+    return { months: blocks, total: running, busiest: peak };
   }, [solves, range, now]);
+
+  // Opened on the most recent month rather than the oldest. Over a year of
+  // squares the interesting end is the right-hand one, and it was the end you
+  // had to go and find.
+  useEffect(() => {
+    const box = scroller.current;
+    if (box) box.scrollLeft = box.scrollWidth;
+  }, [months]);
 
   /**
    * Which of the four fill steps a day earns. Split by share of the busiest day
@@ -112,36 +159,39 @@ export default function ActivityHeatmap({ solves, range, now }: ActivityHeatmapP
 
   return (
     <div className="activity">
-      <div className="activity-scroll">
+      <div className="activity-body">
+        {/* Outside the scroller, so the labels stay put without having to be
+            stuck to it — and one row per weekday on the same rhythm as the
+            cells, so they line up by construction rather than by a padding
+            figure that has to be re-guessed whenever a square changes size. */}
         <div className="activity-days">
-          {WEEKDAYS.map((day) => <span key={day}>{day}</span>)}
+          {WEEKDAYS.map((day, row) => <span key={row}>{day}</span>)}
         </div>
 
-        <div className="activity-grid">
-          {weeks.map((week, index) => (
-            <div
-              // The gap goes before every month but the first: at the left edge
-              // it would read as a missing week rather than as a divider.
-              className={week.month && index > 0 ? 'activity-week month-start' : 'activity-week'}
-              key={week.days[0].key}
-            >
-              {/* Inside the column and positioned over it, so the label is
-                  aligned to its month by construction — a separate row of
-                  labels would have to re-derive every column's width and would
-                  drift the moment one of them changed. */}
-              {week.month && <span className="activity-month">{week.month}</span>}
+        <div className="activity-scroll" ref={scroller}>
+          <div className="activity-grid">
+            {months.map((month) => (
+              <div className="activity-month-block" key={month.key}>
+                <span className="activity-month">{month.label}</span>
 
-              {week.days.map((day) => (
-                <i
-                  key={day.key}
-                  className={day.count < 0 ? 'activity-cell gap' : `activity-cell ${level(day.count)}`}
-                  title={day.count < 0
-                    ? undefined
-                    : `${day.count} ${day.count === 1 ? 'solve' : 'solves'} on ${day.key}`}
-                />
-              ))}
-            </div>
-          ))}
+                {month.columns.map((week, at) => (
+                  <div className="activity-week" key={`${month.key}-${at}`}>
+                    {week.map((cell) => (
+                      <i
+                        key={cell.key}
+                        className={cell.count < 0
+                          ? 'activity-cell gap'
+                          : `activity-cell ${level(cell.count)}`}
+                        title={cell.count < 0
+                          ? undefined
+                          : `${cell.count} ${cell.count === 1 ? 'solve' : 'solves'} on ${cell.label}`}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

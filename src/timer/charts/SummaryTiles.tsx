@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
 import { formatTime } from '../format'
 import {
-  average, best, bestAverage, durationText, mean, meanExec, meanMemo, stdev, totalTime,
+  bestAverageWindow, bestSingleIndex, durationText, mean, meanExec, meanMemo, stdev, totalTime,
 } from '../stats'
-import type { Solve } from '../types'
+import { effectiveMs, type Solve } from '../types'
+import type { AverageView } from '../averageText'
 import type { WcaEvent } from '../events'
+import { tileSpec } from './tiles'
 
 function Tile({ label, value, note, onOpen }: {
   label: string
@@ -27,55 +29,115 @@ function Tile({ label, value, note, onOpen }: {
 
 interface SummaryTilesProps {
   solves: Solve[]
+  /** Every solve of this event, across every session, for the all-time boxes. */
+  allTime: Solve[]
   decimals: 2 | 3
   event: WcaEvent
-  /** Opens the solves behind one of the average tiles. */
-  onOpenAverage?: (label: string, solves: Solve[]) => void
+  /** The boxes to draw, in order. */
+  order: string[]
+  /** Which of them are switched off. */
+  hidden: string[]
+  /** Opens the solves behind one of the boxes. */
+  onOpenAverage?: (view: AverageView) => void
 }
 
 export default function SummaryTiles({
-  solves, decimals, event, onOpenAverage,
+  solves, allTime, decimals, event, order, hidden, onOpenAverage,
 }: SummaryTilesProps) {
   const time = (ms: number) => formatTime(ms, decimals)
 
-  // One list rather than a tile each: the three differ only in their window,
-  // and `bestAverage` is expensive enough at a hundred to be worth computing
-  // once per solve list rather than once per render.
-  const averages = useMemo(() => [5, 12, 100].map((size) => ({
-    size,
-    current: average(solves, size),
-    record: bestAverage(solves, size),
-  })), [solves])
+  // Computed once for the whole set: the best-window search walks the session
+  // per size, and at a hundred that is not something to do per render.
+  const figures = useMemo(() => ({
+    bestFive: bestAverageWindow(solves, 5),
+    bestTwelve: bestAverageWindow(solves, 12),
+    bestHundred: bestAverageWindow(solves, 100),
+    singleAt: bestSingleIndex(solves),
+    allTimeFive: bestAverageWindow(allTime, 5),
+  }), [solves, allTime])
+
+  const off = new Set(hidden)
+
+  /** A box that opens the solves behind it, when there are any to open. */
+  function opener(label: string, window: Solve[] | null, value: number) {
+    if (!onOpenAverage || !window || window.length === 0 || Number.isNaN(value)) return undefined
+    return () => onOpenAverage({ label, solves: window, value })
+  }
+
+  function render(id: string) {
+    switch (id) {
+      case 'solves':
+        return <Tile key={id} label="solves" value={String(solves.length)} />
+      case 'time':
+        return <Tile key={id} label="time solving" value={durationText(totalTime(solves))} />
+      case 'best': {
+        const at = figures.singleAt
+        const value = at >= 0 ? effectiveMs(solves[at]) : NaN
+        return (
+          <Tile
+            key={id}
+            label="best single"
+            value={time(value)}
+            onOpen={opener('best single', at >= 0 ? solves.slice(at, at + 1) : null, value)}
+          />
+        )
+      }
+      case 'allTimeBestAo5': {
+        const { value, start } = figures.allTimeFive
+        return (
+          <Tile
+            key={id}
+            label="all-time best ao5"
+            value={time(value)}
+            note="every session, this event"
+            onOpen={opener(
+              'all-time best ao5',
+              start >= 0 ? allTime.slice(start, start + 5) : null,
+              value,
+            )}
+          />
+        )
+      }
+      case 'mean':
+        return <Tile key={id} label="mean" value={time(mean(solves))} />
+      case 'deviation':
+        return <Tile key={id} label="deviation" value={time(stdev(solves))} />
+      case 'bestAo5':
+      case 'bestAo12':
+      case 'bestAo100': {
+        const size = id === 'bestAo5' ? 5 : id === 'bestAo12' ? 12 : 100
+        const found = size === 5
+          ? figures.bestFive
+          : size === 12 ? figures.bestTwelve : figures.bestHundred
+        const label = `best ao${size}`
+        return (
+          <Tile
+            key={id}
+            label={label}
+            value={time(found.value)}
+            onOpen={opener(
+              label,
+              found.start >= 0 ? solves.slice(found.start, found.start + size) : null,
+              found.value,
+            )}
+          />
+        )
+      }
+      case 'memo':
+        return <Tile key={id} label="memo" value={time(meanMemo(solves))} note="mean over split solves" />
+      case 'exec':
+        return <Tile key={id} label="exec" value={time(meanExec(solves))} note="mean over split solves" />
+      default:
+        return null
+    }
+  }
 
   return (
     <div className="tiles">
-      <Tile label="solves" value={String(solves.length)} />
-      <Tile label="time solving" value={durationText(totalTime(solves))} />
-      <Tile label="best" value={time(best(solves))} />
-      <Tile label="mean" value={time(mean(solves))} />
-      <Tile
-        label="deviation"
-        value={time(stdev(solves))}
-        note="how far a typical solve lands from the mean"
-      />
-      {averages.map((item) => (
-        <Tile
-          key={item.size}
-          label={`ao${item.size}`}
-          value={time(item.current)}
-          note={`best ${time(item.record)}`}
-          onOpen={onOpenAverage && !Number.isNaN(item.current)
-            ? () => onOpenAverage(`ao${item.size}`, solves.slice(-item.size))
-            : undefined}
-        />
-      ))}
-
-      {event.split && (
-        <>
-          <Tile label="memo" value={time(meanMemo(solves))} note="mean over split solves" />
-          <Tile label="exec" value={time(meanExec(solves))} note="mean over split solves" />
-        </>
-      )}
+      {order
+        .filter((id) => !off.has(id))
+        .filter((id) => event.split || !tileSpec(id)?.splitOnly)
+        .map(render)}
     </div>
   )
 }

@@ -262,9 +262,15 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
 
         <SummaryTiles
           solves={session.solves}
+          // Every solve of this event rather than this session's, which is what
+          // "all-time" has to mean — the boxes that say so are asking about the
+          // event, and sessions are how you chose to divide it up.
+          allTime={byEvent.get(session.event) ?? []}
           decimals={decimals}
           event={event}
-          onOpenAverage={(label, window) => setDetail({ label, solves: window })}
+          order={settings.statTiles}
+          hidden={settings.statTilesOff}
+          onOpenAverage={setDetail}
         />
 
         <h3 className="chart-title">
@@ -304,14 +310,33 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
         <h3 className="chart-title">
           where they land
           <span>ao5 now {formatTime(average(session.solves, 5), decimals)}</span>
+          {/* Beside the chart it draws on, not buried in settings — it is the
+              kind of thing you switch off for one look and back on after. */}
+          <span className="chart-spans">
+            <button
+              type="button"
+              aria-pressed={settings.showHistogramMean}
+              onClick={() => onSettings({
+                ...settings,
+                showHistogramMean: !settings.showHistogramMean,
+              })}
+            >
+              mean line
+            </button>
+          </span>
         </h3>
-        <Histogram solves={windowed} decimals={decimals} />
+        <Histogram
+          solves={windowed}
+          decimals={decimals}
+          showMean={settings.showHistogramMean}
+        />
       </section>
 
       {detail && (
         <AverageDetail
           label={detail.label}
           solves={detail.solves}
+          value={detail.value}
           decimals={decimals}
           onClose={() => setDetail(null)}
         />
