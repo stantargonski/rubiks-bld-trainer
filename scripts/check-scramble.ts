@@ -11,6 +11,7 @@
 import { EVENTS, eventOf } from '../src/timer/events';
 import { scrambleFor, scrambleText } from '../src/timer/scramble';
 import { warmUp, isReady, randomStateScramble } from '../src/timer/scramble/twoByTwo';
+import { randomOrientation } from '../src/timer/scramble/nxn';
 import { solvedCube, stateAfter } from '../src/cube/nxn';
 
 const failures: string[] = [];
@@ -51,15 +52,22 @@ function checkEveryEvent(): void {
         }
       }
 
-      // Only blindfolded events get a reorientation, and it never lands in the moves.
-      const expectsRotation = event.id.endsWith('bf');
-      check(
-        (scramble.rotation.length > 0) === (expectsRotation && scramble.rotation.length > 0),
-        `${event.id}: unexpected rotation ${scramble.rotation.join(' ')}`,
-      );
-      if (!expectsRotation) {
-        check(scramble.rotation.length === 0, `${event.id}: should have no reorientation`);
+      // 3BLD ends held at a random angle, written as up to two wide moves on
+      // the end of the scramble rather than as an instruction beside it. Only
+      // checkable on the 3x3, where nothing else emits a wide turn — a 4BLD
+      // scramble is full of them.
+      if (event.id === '333bf') {
+        const wide = scramble.moves.filter((token) => /w/.test(token));
+        check(
+          wide.length <= 2 && wide.every((token) => /^(Rw|Fw|Uw)('|2)?$/.test(token)),
+          `${event.id}: unexpected wide moves "${wide.join(' ')}"`,
+        );
+        check(
+          scramble.moves.slice(scramble.moves.length - wide.length).join(' ') === wide.join(' '),
+          `${event.id}: the reorientation is not on the end of ${scramble.moves.join(' ')}`,
+        );
       }
+
       // Only meaningful for cubes: clock's `y2` is part of its own notation,
       // an instruction to turn the puzzle over, not a cube reorientation.
       if (event.preview === 'nxn') {
@@ -79,6 +87,44 @@ function checkEveryEvent(): void {
         prev = face;
       }
     }
+  }
+}
+
+/**
+ * All 24 orientations, each reachable.
+ *
+ * The suffix is generated before the scramble it joins onto precisely so that
+ * filtering never narrows it — so the thing worth asserting is that nothing has
+ * narrowed it. A blindfolded solver who can rule out four of the twenty-four
+ * angles has been handed information the event is supposed to withhold.
+ */
+function checkOrientations(): void {
+  const seen = new Set<string>();
+  for (let trial = 0; trial < 20_000; trial += 1) {
+    const orientation = randomOrientation();
+    check(orientation.length <= 2, `orientation too long: ${orientation.join(' ')}`);
+    check(
+      orientation.every((token) => /^(Rw|Fw|Uw)('|2)?$/.test(token)),
+      `orientation used an unexpected token: ${orientation.join(' ')}`,
+    );
+    seen.add(orientation.join(' '));
+  }
+  check(seen.size === 24, `only ${seen.size} of 24 orientations are reachable`);
+}
+
+/** Multi-blind scrambles one cube per line, as many as the timer asks for. */
+function checkMultiBlind(): void {
+  const event = eventOf('333mbf');
+  for (const mbldCount of [2, 3, 7, 60]) {
+    const scramble = scrambleFor(event, { mbldCount });
+    check(
+      scramble.lines?.length === mbldCount,
+      `333mbf: asked for ${mbldCount} cubes, got ${scramble.lines?.length}`,
+    );
+    check(
+      (scramble.lines ?? []).every((line, index) => line.startsWith(`${index + 1}) `)),
+      '333mbf: lines are not numbered in order',
+    );
   }
 }
 
@@ -142,6 +188,8 @@ function checkEventTable(): void {
 checkEventTable();
 checkEveryEvent();
 checkNotSolved();
+checkOrientations();
+checkMultiBlind();
 await checkTwoByTwo();
 
 if (failures.length > 0) {

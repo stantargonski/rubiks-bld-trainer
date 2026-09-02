@@ -3,18 +3,18 @@ import type { Settings } from '../../settings/defaults';
 import { blankEntry, IMAGE_TIP, type PairEntry, type PairStore } from './types';
 import { buildFillQueue } from './scope';
 import { suggestFor } from './suggester';
+import { BUILT_IN_SUGGESTIONS } from './suggestions';
 import Tip from './Tip'
 
 interface FillModeProps {
   store: PairStore;
   settings: Settings;
-  words: Record<string, string[]>;
   onChangeEntry: (entry: PairEntry) => void;
   onExit: () => void;
 }
 
 export default function FillMode({
-  store, settings, words, onChangeEntry, onExit,
+  store, settings, onChangeEntry, onExit,
 }: FillModeProps) {
   // Frozen at mount. If this rebuilt as you typed, the pair under your cursor
   // would drop out of the list and the next one would jump into its place.
@@ -45,7 +45,7 @@ export default function FillMode({
   }
 
   const entry = store.pairs[code] ?? blankEntry(code);
-  const suggestions = suggestFor(code, words);
+  const suggestions = suggestFor(code, BUILT_IN_SUGGESTIONS);
 
   function accept(value: string) {
     onChangeEntry({ ...entry, image: value });
@@ -87,7 +87,7 @@ export default function FillMode({
 
       <div className="fill-suggestions">
         {suggestions.length === 0 ? (
-          <p className="hint">No suggestions for {code} — paste a list on the grid screen.</p>
+          <p className="hint">No suggestions for {code}.</p>
         ) : (
           suggestions.map((suggestion) => (
             <button

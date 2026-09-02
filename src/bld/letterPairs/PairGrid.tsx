@@ -4,8 +4,8 @@ import type { Settings } from '../../settings/defaults'
 import { blankEntry, cellLevel, hasImage, type PairEntry, type PairStore } from './types'
 import { blindSets, pairFlag, nextEmptyCode, liveCodes, type PairFlag } from './scope'
 import { suggestFor } from './suggester'
+import { BUILT_IN_SUGGESTIONS } from './suggestions'
 import PairEditor from './PairEditor'
-import SuggestionLoader from './SuggestionLoader'
 
 const ALL_PAIRS = LETTERS.length * LETTERS.length - LETTERS.length
 const pct = (part: number, whole: number) =>
@@ -24,15 +24,12 @@ interface PairGridProps {
   onSettings: (next: Settings) => void
   selected: string | null
   onSelect: (code: string) => void
-  suggestions: Record<string, string[]>
-  onSuggestions: (words: Record<string, string[]>) => void
   onChangeEntry: (entry: PairEntry) => void
   onFill: () => void
 }
 
 export default function PairGrid({
-  store, settings, onSettings, selected, onSelect,
-  suggestions, onSuggestions, onChangeEntry, onFill,
+  store, settings, onSettings, selected, onSelect, onChangeEntry, onFill,
 }: PairGridProps) {
   const blind = useMemo(() => blindSets(settings), [settings]);
   const codes = useMemo(() => liveCodes(settings), [settings]);
@@ -119,12 +116,6 @@ export default function PairGrid({
         <div className="actions">
           <button onClick={onFill}>Fill images</button>
         </div>
-
-        <SuggestionLoader
-          words={suggestions}
-          liveCodes={codes}
-          onLoad={onSuggestions}
-        />
       </aside>
 
       <aside className="panel editor-panel">
@@ -133,7 +124,7 @@ export default function PairGrid({
             key={entry.code}
             entry={entry}
             flagLabel={FLAG_LABEL[pairFlag(entry.code[0] as Letter, entry.code[1] as Letter, settings)]}
-            suggestions={suggestFor(entry.code, suggestions)}
+            suggestions={suggestFor(entry.code, BUILT_IN_SUGGESTIONS)}
             onChange={onChangeEntry}
             onNext={() => {
               const next = nextEmptyCode(entry.code, store.pairs, settings);
