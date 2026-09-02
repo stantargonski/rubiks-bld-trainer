@@ -709,15 +709,15 @@ textarea,
 
    Deliberately a fixed dark ink rather than var(--text): both ends of every
    arrow sit on the U face, which this diagram always draws yellow, so the one
-   thing the line has to read against is the same colour in every theme. Edges
-   are dashed so a corner cycle and an edge cycle stay apart when they cross. */
+   thing the line has to read against is the same colour in every theme.
+
+   Thin and solid, corners and edges alike: what the eye needs off a tile this
+   size is which way the piece goes, and a hairline with one head says that
+   without the four crossing dashes it used to take. */
 .case-arrow {
   stroke: #16181d;
-  stroke-width: 0.14;
+  stroke-width: 0.07;
   stroke-linecap: round;
-}
-.case-arrow.edge {
-  stroke-dasharray: 0.24 0.2;
 }
 .arrow-head {
   fill: #16181d;
@@ -807,6 +807,44 @@ textarea,
 .rail-icon:hover {
   color: var(--text);
   border-color: var(--text-dim);
+}
+
+/* At the foot of the rail rather than floating over a corner of the stage:
+   these switch the timer itself, and a control you have to find is a control
+   you forget you have. */
+.rail-tools {
+  flex: none;
+  /* Held at the foot even with the solve list turned off, when nothing above
+     is growing to push it there. */
+  margin-top: auto;
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+.rail-tool {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 8px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rail-tool:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+.rail-tool[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
 }
 
 
@@ -1046,9 +1084,8 @@ textarea,
   flex: none;
   display: flex;
   gap: 6px;
-  padding-top: 6px;
 }
-.scramble-nav button {
+.scramble-nav > * {
   padding: 5px 11px;
   background: transparent;
   border: 1px solid var(--line);
@@ -1240,18 +1277,6 @@ textarea,
 }
 
 /* ----- bottom-right tool dock ----- */
-/* Absolute so the clock stays optically centred in .timer-stage no matter how
-   large the net panel gets. */
-.timer-dock {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  transition: opacity 140ms ease;
-}
-
 
 .cube-net {
   width: 214px;
@@ -1423,6 +1448,9 @@ textarea,
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   overflow: hidden;
+  /* The tiles own colour rather than the card behind them, so a row that does
+     not divide evenly ends in empty box rather than in a hole. */
+  background: var(--panel-2);
 }
 /* One box with hairlines between the figures, rather than a box per figure:
    these are facets of the same session, and drawing them as separate cards
@@ -1506,6 +1534,10 @@ textarea,
 }
 .chart-title .key.ao5 { background: var(--accent); }
 .chart-title .key.ao12 { background: var(--text-dim); }
+.chart-title .key.ao100 {
+  background: color-mix(in srgb, var(--accent) 55%, var(--text-dim));
+  opacity: 0.6;
+}
 .chart-title .key.pb {
   width: 7px;
   height: 7px;
@@ -1534,6 +1566,12 @@ textarea,
 }
 .chart .line.ao5 { stroke: var(--accent); }
 .chart .line.ao12 { stroke: var(--text-dim); opacity: 0.75; }
+/* Furthest back of the three: a hundred solves move slowly, so this is the
+   line you read the shape of rather than the value off. */
+.chart .line.ao100 {
+  stroke: color-mix(in srgb, var(--accent) 55%, var(--text-dim));
+  opacity: 0.6;
+}
 .chart .point {
   fill: var(--text);
   opacity: 0.55;
@@ -1598,7 +1636,6 @@ textarea,
 .timer-frame.solving .timer-rail,
 .timer-frame.solving .comp-bar,
 .timer-frame.solving .scramble-bar,
-.timer-frame.solving .timer-dock,
 .timer-frame.solving .scramble-preview,
 .timer-frame.solving .timer-hint {
   opacity: 0;
@@ -1607,7 +1644,6 @@ textarea,
 
 @media (max-width: 820px) {
   .timer-rail { display: none; }
-  .timer-dock { display: none; }
   .scramble-preview { display: none; }
 }
 /* ----- event picker ----- */
@@ -1727,6 +1763,9 @@ textarea,
 .preview-grip:hover::before,
 .preview-grip:hover::after { opacity: 1; }
 .preview-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding-left: 18px;
   cursor: move;
   touch-action: none;
@@ -1737,6 +1776,21 @@ textarea,
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+/* Pushed to the far end of the title bar, away from the edge you grab. */
+.preview-reset {
+  margin-left: auto;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1;
+}
+.preview-reset:hover {
+  color: var(--text);
+}
+
 /* The net keeps its aspect ratio and takes whatever room is left, so dragging
    the panel taller than it is wide doesn't stretch the cube. */
 .preview-body {
@@ -1764,28 +1818,6 @@ textarea,
   height: 100%;
   border-radius: var(--radius-sm);
   background: var(--panel-2);
-}
-
-.dock-round {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  color: var(--text-dim);
-  font-size: calc(16px * var(--font-scale));
-}
-.dock-round:hover {
-  color: var(--text);
-  border-color: var(--text-dim);
-}
-.dock-round[aria-pressed='true'] {
-  background: var(--accent);
-  border-color: transparent;
-  color: var(--accent-ink);
 }
 
 /* ----- stepper: the control that replaced every slider ----- */
@@ -1929,8 +1961,6 @@ textarea,
 .header-main {
   display: flex;
   flex-direction: column;
-  padding-right: 44px;
-  border-right: 1px solid var(--line);
 }
 .header-count {
   font-size: calc(52px * var(--font-scale));
@@ -1939,14 +1969,23 @@ textarea,
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
+/* Pushed to the far edge, with the rule travelling with them — left on
+   .header-main it would have hung in open space beside the solve count. */
 .header-figures {
   display: flex;
   flex-wrap: wrap;
   gap: 20px 44px;
+  margin-left: auto;
+  padding-left: 44px;
+  border-left: 1px solid var(--line);
 }
+/* Right-aligned inside each cell too: pushing the group over and leaving the
+   labels ragged against it only half-does it. */
 .header-figures > div {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
   gap: 2px;
 }
 .header-label {
@@ -1963,9 +2002,14 @@ textarea,
   letter-spacing: -0.02em;
 }
 @media (max-width: 640px) {
-  .header-main {
-    padding-right: 0;
-    border-right: 0;
+  .header-figures {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .header-figures > div {
+    align-items: flex-start;
+    text-align: left;
   }
 }
 

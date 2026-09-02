@@ -11,8 +11,9 @@
     "preview": "vite preview",
     "check:cube": "node --experimental-strip-types --import ./scripts/ts-loader.mjs scripts/check-cube.ts",
     "check:scramble": "node --experimental-strip-types --import ./scripts/ts-loader.mjs scripts/check-scramble.ts",
-    "check": "npm run check:algs && npm run check:cube && npm run check:scramble && npm run check:timer",
-    "check:timer": "node --experimental-strip-types --import ./scripts/ts-loader.mjs scripts/check-timer.ts"
+    "check": "npm run check:algs && npm run check:cube && npm run check:scramble && npm run check:timer && npm run check:stats",
+    "check:timer": "node --experimental-strip-types --import ./scripts/ts-loader.mjs scripts/check-timer.ts",
+    "check:stats": "node --experimental-strip-types --import ./scripts/ts-loader.mjs scripts/check-stats.ts"
   },
   "dependencies": {
     "react": "^19.2.8",
