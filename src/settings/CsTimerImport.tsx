@@ -281,10 +281,8 @@ export default function CsTimerImport({ store, onImport, onOpenTimer }: CsTimerI
       )}
 
       <p className="hint">
-        In csTimer: the wrench icon → Export → &ldquo;Export to file&rdquo;. Drop that .txt here or
-        pick it above. Times, scrambles, dates, +2s and DNFs all come across; solve comments
-        don&apos;t. Nothing is written until you press import, and nothing already here is ever
-        replaced.
+        In csTimer: the wrench icon → Export → &ldquo;Export to file&rdquo;. Drag and drop the .txt or
+        open here.
       </p>
     </div>
   )

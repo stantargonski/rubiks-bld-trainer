@@ -226,7 +226,6 @@ export default function SettingsPage({
         </Row>
         <Row
           label="monospaced scramble"
-          description="Every move the same width, so the scramble reads as columns."
         >
           <Toggle value={timer.monoScramble} onChange={(v) => setTimer('monoScramble', v)} />
         </Row>

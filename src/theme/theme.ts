@@ -79,6 +79,36 @@ export const THEMES: Theme[] = [
     },
   },
   {
+    id: 'ember',
+    name: 'Ember',
+    dark: true,
+    colors: {
+      bg: '#17110d', panel: '#211913', panel2: '#2c211a', line: '#3a2c22',
+      text: '#f0e4da', textDim: '#b09a8a', accent: '#ff8a3d', accentInk: '#1a0f07',
+      dead: '#120c09',
+    },
+  },
+  {
+    id: 'slate',
+    name: 'Slate',
+    dark: true,
+    colors: {
+      bg: '#0f1416', panel: '#182024', panel2: '#212b30', line: '#2c383e',
+      text: '#dbe6ea', textDim: '#93a5ad', accent: '#4dd0c7', accentInk: '#0d1a1c',
+      dead: '#0c1113',
+    },
+  },
+  {
+    id: 'mono',
+    name: 'Mono',
+    dark: true,
+    colors: {
+      bg: '#121212', panel: '#0d0d0d', panel2: '#171717', line: '#2e2e2e',
+      text: '#F9FAFB', textDim: '#a8a8a8', accent: '#F9FAFB', accentInk: '#121212',
+      dead: '#050505',
+    },
+  },
+  {
     id: 'paper',
     name: 'Paper',
     dark: false,
@@ -86,6 +116,16 @@ export const THEMES: Theme[] = [
       bg: '#e1e1e3', panel: '#f3f3f4', panel2: '#e7e7e9', line: '#c9c9cd',
       text: '#323437', textDim: '#6f747c', accent: '#c39a08', accentInk: '#ffffff',
       dead: '#d7d7da',
+    },
+  },
+  {
+    id: 'sakura',
+    name: 'Sakura',
+    dark: false,
+    colors: {
+      bg: '#f2ecee', panel: '#fffafb', panel2: '#f8eef1', line: '#e0cdd4',
+      text: '#3a2f34', textDim: '#7d6a72', accent: '#d6608f', accentInk: '#ffffff',
+      dead: '#e9e0e3',
     },
   },
 ];
@@ -101,8 +141,11 @@ export const FONTS: FontChoice[] = [
   { id: 'manrope', name: 'Manrope', stack: "'Manrope', system-ui, sans-serif" },
   { id: 'inter', name: 'Inter', stack: "'Inter', system-ui, sans-serif" },
   { id: 'lexend', name: 'Lexend', stack: "'Lexend', system-ui, sans-serif" },
+  { id: 'outfit', name: 'Outfit', stack: "'Outfit', system-ui, sans-serif" },
+  { id: 'space-grotesk', name: 'Space Grotesk', stack: "'Space Grotesk', system-ui, sans-serif" },
   { id: 'jetbrains', name: 'JetBrains Mono', stack: "'JetBrains Mono', ui-monospace, monospace" },
   { id: 'roboto-mono', name: 'Roboto Mono', stack: "'Roboto Mono', ui-monospace, monospace" },
+  { id: 'plex-mono', name: 'IBM Plex Mono', stack: "'IBM Plex Mono', ui-monospace, monospace" },
   { id: 'system', name: 'System', stack: 'system-ui, -apple-system, sans-serif' },
 ];
 

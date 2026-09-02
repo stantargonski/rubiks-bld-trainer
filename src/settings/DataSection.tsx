@@ -66,7 +66,7 @@ export default function DataSection() {
   return (
     <div className="data-section">
       <div className="actions">
-        <button type="button" onClick={() => void save()}>export everything</button>
+        <button type="button" onClick={() => void save()}>export data</button>
         <button
           type="button"
           onClick={() => {
@@ -78,7 +78,7 @@ export default function DataSection() {
             }
           }}
         >
-          import backup
+          import data
         </button>
       </div>
 
@@ -115,21 +115,19 @@ export default function DataSection() {
       )}
 
       <p className="hint">
-        One file holds pairs, solves, algs and settings. Nothing leaves your browser.
+        One file holds pairs, solves, algs and settings.
       </p>
 
       {snapshot && (
         <div className="data-snapshot">
-          <h3>before this version</h3>
+          <h3>If settings are bugged on update</h3>
           <p className="hint">
             A copy of everything was taken automatically on{' '}
-            {new Date(snapshot.takenAt).toLocaleString()}, just before this version
-            of tstimer read your data for the first time. If anything looks wrong
-            since updating, this puts it back exactly as it was.
+            {new Date(snapshot.takenAt).toLocaleString()}.
           </p>
           <div className="actions">
             <button type="button" onClick={() => void rollBack()}>
-              restore that copy
+              restore previous verison settings
             </button>
           </div>
         </div>

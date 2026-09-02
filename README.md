@@ -22,7 +22,7 @@ Add demo videos
 
 ## Import csTimer data
 
-Export to file from csTimer's Data Import/Export menu and upload the file to transfer your solves to tstimer
+    In csTimer: the wrench icon → Export → "Export to file". Drag and drop the .txt or open in the settings menu.
 
 ## Running it locally
 
