@@ -1,6 +1,6 @@
 # tstimer
 
-A speedcubing timer and memo trainer for 3BLD and CFOP trainer. Scrambles for all 17 WCA events, a Speffz letter-pair
+A speedcubing timer, BLD memo trainer, and CFOP trainer. Scrambles for all 17 WCA events, a Speffz letter-pair
 library for 3BLD, and the 21 PLL cases with algs for your to learn or practice.
 
 **[tstimer](https://stantargonski.github.io/tstimer/)**
