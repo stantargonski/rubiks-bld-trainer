@@ -1388,36 +1388,111 @@ textarea,
 }
 
 /* ----- settings page ----- */
-/* A column of rows rather than a grid of controls: settings are read down the
-   page one at a time, and every one of them gets room for a sentence saying
-   what it does. */
+/* A rail of jump links, then the settings. The rail lives in what used to be
+   dead space on the left of a centred page, and sticks — a settings page long
+   enough to need section links is one you have already scrolled the headings
+   off the top of.
+
+   `minmax(0, 1fr)` rather than `1fr` on the content column: a grid track sized
+   `1fr` refuses to shrink below its content, and the sticky preview inside it
+   would push the whole page wider on a narrow window. */
 .settings-page {
   display: flex;
   flex-direction: column;
   gap: 26px;
 }
-/* Two columns on a wide window, because a settings page that uses a third of a
-   monitor is a settings page you scroll more than you read. */
-@media (min-width: 1100px) {
+@media (min-width: 1000px) {
   .settings-page {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 150px minmax(0, 1fr);
     align-items: start;
-    gap: 26px 40px;
+    gap: 40px;
   }
-  /* The timer group owns the left column outright — it holds the preview. */
-  .settings-page > .settings-group:first-child {
-    grid-row: span 2;
+}
+.settings-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+@media (min-width: 1000px) {
+  .settings-nav {
+    position: sticky;
+    /* The scroller is `main.content`, which already starts under the top bar,
+       so this is a gap rather than a correction for it. */
+    top: 0;
+    flex-direction: column;
+    flex-wrap: nowrap;
   }
+}
+.settings-nav button {
+  padding: 7px 11px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.settings-nav button:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.settings-nav button[aria-current='true'] {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  min-width: 0;
 }
 .settings-group {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* So a jumped-to heading lands under the top of the scroller, not against it. */
+  scroll-margin-top: 8px;
 }
-.settings-group .panel-title {
-  margin-bottom: 10px;
+.settings-group .panel-title { margin-bottom: 10px; }
+/* The headings that open a second thing inside one section need air above them. */
+.settings-group .panel-title:not(:first-child) { margin-top: 26px; }
+
+/* Controls on one side, the mock on the other. */
+.settings-split {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
+@media (min-width: 900px) {
+  .settings-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 40px;
+  }
+}
+.settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* Follows the scroll instead of sliding away at the first toggle. The whole
+   point of the mock is watching what a setting does, which it cannot do from
+   above the fold. */
+.settings-preview {
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .settings-preview {
+    position: sticky;
+    top: 0;
+  }
+}
+
 .setting-row {
   display: flex;
   flex-wrap: wrap;
@@ -2959,4 +3034,126 @@ textarea,
 .mean-line text {
   fill: var(--text);
   font-weight: 700;
+}
+
+/* ----- rearranging the stats boxes ----- */
+.tile-editor {
+  margin-top: 6px;
+}
+.tile-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tile-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+/* Dimmed rather than dropped: a hidden box you can't find is a box you can't
+   put back, and the list would reshuffle every time you switched one off. */
+.tile-item.off {
+  opacity: 0.5;
+}
+.tile-name {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 600;
+}
+.tile-name i {
+  color: var(--text-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-style: normal;
+}
+.tile-item-tools {
+  display: flex;
+  gap: 4px;
+}
+.tile-item-tools button {
+  min-width: 30px;
+  padding: 4px 8px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 700;
+}
+.tile-item-tools button:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.tile-item-tools button:disabled {
+  opacity: 0.35;
+}
+.tile-toggle[aria-pressed='true'] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.setting-aside {
+  color: var(--text-dim);
+  font-size: calc(14px * var(--font-scale));
+}
+
+/* ----- deleting everything ----- */
+/* Red, and the only red control on the page. Everything else here either adds
+   something or can be undone by pressing it again. */
+.data-danger {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.data-danger h3,
+.data-snapshot h3 {
+  margin: 0 0 8px;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.data-danger h3 {
+  color: var(--holding);
+}
+.data-danger .hint {
+  margin: 0 0 10px;
+}
+.data-danger-warn {
+  margin: 0 0 10px;
+  color: var(--holding);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 600;
+}
+.data-danger-field {
+  width: 160px;
+  padding: 7px 10px;
+  margin-bottom: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--holding);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: calc(14px * var(--font-scale));
+}
+.actions button.danger {
+  color: var(--holding);
+  border-color: color-mix(in srgb, var(--holding) 45%, transparent);
+}
+.actions button.danger:hover:not(:disabled) {
+  color: #fff;
+  background: var(--holding);
+  border-color: transparent;
+}
+.actions button.danger:disabled {
+  opacity: 0.4;
 }

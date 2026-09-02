@@ -21,6 +21,7 @@
 
 import { SLOT_KEYS } from './backup';
 import { idbDelete, idbGet, idbPut } from './idb';
+import { clearBackground } from '../theme/imageStore';
 
 /**
  * Bump this on any release that changes how stored data is read or written.
@@ -142,4 +143,27 @@ export async function restoreSnapshot(): Promise<boolean> {
 
 export async function clearSnapshot(): Promise<void> {
   await idbDelete(SNAPSHOT_KEY);
+}
+
+/**
+ * Removes every trace of this app from this browser.
+ *
+ * The snapshot goes with it, and that is the point worth being deliberate
+ * about: leaving it behind would mean "delete everything" quietly kept a full
+ * copy of everything, and the restore button in Settings would offer to bring
+ * it all back. A delete that can be undone by accident is not a delete.
+ *
+ * The build marker goes too, so the next load is treated as a first run rather
+ * than photographing the empty state over the top of nothing.
+ */
+export async function eraseEverything(): Promise<void> {
+  try {
+    for (const key of SLOT_KEYS) localStorage.removeItem(key);
+    localStorage.removeItem(BUILD_SEEN_KEY);
+  } catch {
+    // Nothing readable to remove.
+  }
+
+  await clearSnapshot();
+  await clearBackground();
 }

@@ -3,18 +3,19 @@ import PairGrid from './bld/letterPairs/PairGrid';
 import FillMode from './bld/letterPairs/FillMode';
 import { loadStore, saveStore } from './bld/letterPairs/storage';
 import { isBlankEntry, type PairEntry } from './bld/letterPairs/types';
-import { loadSettings, saveSettings, type Settings } from './settings/defaults';
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from './settings/defaults';
 import TimerPanel from './timer/TimerPanel'
 import CfopPanel from './cfop/CfopPanel';
 import { loadCfopStore, saveCfopStore } from './cfop/storage';
 import { isBlankEntry as isBlankCase, type CaseEntry } from './cfop/types';
 import SettingsPage from './settings/SettingsPage';
 import {
-  applyAppearance, applyBackground, loadAppearance, saveAppearance, type Appearance,
+  applyAppearance, applyBackground, DEFAULT_APPEARANCE, loadAppearance, saveAppearance,
+  type Appearance,
 } from './theme/theme';
 import { getBackground } from './theme/imageStore';
 import {
-  loadTimerSettings, saveTimerSettings, type TimerSettings,
+  DEFAULT_TIMER_SETTINGS, loadTimerSettings, saveTimerSettings, type TimerSettings,
 } from './timer/settings';
 import { loadTimerStore, saveTimerStore } from './timer/storage';
 import StatsPage from './timer/StatsPage';
@@ -66,6 +67,21 @@ export default function App() {
     setAppearance(next);
     saveAppearance(next);
     applyAppearance(next);
+  }
+
+  /**
+   * Every setting back to stock, and nothing else.
+   *
+   * Lives here because the three settings objects live here — the settings page
+   * is handed two of them and has never heard of the buffers. Deliberately does
+   * not touch the four *stores*: this is the button for a layout you have made
+   * a mess of, not for starting over, and the two should never be one keypress
+   * apart from each other.
+   */
+  function restoreDefaults() {
+    updateTimerSettings(DEFAULT_TIMER_SETTINGS);
+    updateAppearance(DEFAULT_APPEARANCE);
+    updateSettings(DEFAULT_SETTINGS);
   }
 
   useEffect(() => {
@@ -224,6 +240,7 @@ export default function App() {
             timerStore={timerStore}
             onTimerStore={setTimerStore}
             onOpenTimer={() => setSection('timer')}
+            onRestoreDefaults={restoreDefaults}
           />
         )}
        </div>

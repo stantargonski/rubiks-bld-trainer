@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { downloadText, exportAll, importAll, stamp, type ImportReport } from '../data/backup'
 import { describeBytes, MAX_FILE_BYTES, tooBig } from '../data/limits'
-import { getSnapshot, restoreSnapshot, type Snapshot } from '../data/snapshot'
+import { eraseEverything, getSnapshot, restoreSnapshot, type Snapshot } from '../data/snapshot'
 
 /**
  * Backup and restore for everything the app has stored.
@@ -14,6 +14,9 @@ export default function DataSection() {
   const [report, setReport] = useState<ImportReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
+  /** How far through the two-step delete we are: 0 idle, 1 warned, 2 typing. */
+  const [step, setStep] = useState(0)
+  const [typed, setTyped] = useState('')
 
   // The copy taken automatically the first time this build ran. Absent on a
   // fresh install, and absent where IndexedDB isn't available — both of which
@@ -23,6 +26,19 @@ export default function DataSection() {
     void getSnapshot().then((found) => { if (live) setSnapshot(found) })
     return () => { live = false }
   }, [])
+
+  function cancelWipe() {
+    setStep(0)
+    setTyped('')
+  }
+
+  async function wipe() {
+    if (typed.trim().toLowerCase() !== 'delete') return
+    await eraseEverything()
+    // Reloaded rather than cleared in place: half this app's state is already in
+    // React, and a page still holding it would write some of it straight back.
+    window.location.reload()
+  }
 
   async function rollBack() {
     if (!snapshot) return
@@ -117,6 +133,72 @@ export default function DataSection() {
       <p className="hint">
         One file holds pairs, solves, algs and settings.
       </p>
+
+      {/* Two steps, and the second one asks you to type the word. A single
+          confirm is a reflex you can get through without reading; typing is the
+          cheapest thing that cannot be done by accident, and this is the one
+          control here with nothing behind it. */}
+      <div className="data-danger">
+        <h3>delete everything</h3>
+
+        {step === 0 && (
+          <>
+            <p className="hint">
+              Erases every solve, session, alg, letter pair and setting stored in
+              this browser, along with the automatic copy below. There is no undo.
+              Export a backup first if you might want any of it.
+            </p>
+            <div className="actions">
+              <button type="button" className="danger" onClick={() => setStep(1)}>
+                delete everything
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 1 && (
+          <>
+            <p className="data-danger-warn">
+              This cannot be undone, and it removes the restore copy too.
+            </p>
+            <div className="actions">
+              <button type="button" className="danger" onClick={() => setStep(2)}>
+                I understand, continue
+              </button>
+              <button type="button" onClick={cancelWipe}>cancel</button>
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <p className="data-danger-warn">
+              Type <b>delete</b> to confirm.
+            </p>
+            <input
+              className="data-danger-field"
+              type="text"
+              value={typed}
+              autoFocus
+              spellCheck={false}
+              aria-label="type delete to confirm"
+              onChange={(change) => setTyped(change.target.value)}
+              onKeyDown={(press) => { if (press.key === 'Enter') void wipe() }}
+            />
+            <div className="actions">
+              <button
+                type="button"
+                className="danger"
+                disabled={typed.trim().toLowerCase() !== 'delete'}
+                onClick={() => void wipe()}
+              >
+                erase everything
+              </button>
+              <button type="button" onClick={cancelWipe}>cancel</button>
+            </div>
+          </>
+        )}
+      </div>
 
       {snapshot && (
         <div className="data-snapshot">
