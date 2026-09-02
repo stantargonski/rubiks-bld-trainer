@@ -181,6 +181,9 @@ export default function App() {
             onBackgroundChanged={() => setBackgroundNonce((count) => count + 1)}
             timer={timerSettings}
             onTimer={updateTimerSettings}
+            timerStore={timerStore}
+            onTimerStore={setTimerStore}
+            onOpenTimer={() => setSection('timer')}
           />
         )}
        </div>

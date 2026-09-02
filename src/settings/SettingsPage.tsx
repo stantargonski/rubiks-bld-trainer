@@ -1,9 +1,11 @@
 import { useRef, type ReactNode } from 'react'
+import CsTimerImport from './CsTimerImport'
 import DataSection from './DataSection'
 import TimerPreview from './TimerPreview'
 import { FONTS, THEMES, type Appearance } from '../theme/theme'
 import { clearBackground, downscale, putBackground } from '../theme/imageStore'
 import type { TimerSettings } from '../timer/settings'
+import type { TimerStore } from '../timer/types'
 
 /**
  * One row: what the setting is on the left, the control on the right.
@@ -103,10 +105,16 @@ interface SettingsPageProps {
   onBackgroundChanged: () => void
   timer: TimerSettings
   onTimer: (next: TimerSettings) => void
+  /** The whole solve history, for the csTimer importer to add to. */
+  timerStore: TimerStore
+  onTimerStore: (next: TimerStore) => void
+  /** Leaves for the timer, so an import ends where the solves are. */
+  onOpenTimer: () => void
 }
 
 export default function SettingsPage({
-  appearance, onAppearance, onBackgroundChanged, timer, onTimer,
+  appearance, onAppearance, onBackgroundChanged, timer, onTimer, timerStore, onTimerStore,
+  onOpenTimer,
 }: SettingsPageProps) {
   const picker = useRef<HTMLInputElement>(null)
 
@@ -150,7 +158,7 @@ export default function SettingsPage({
         <Row label="session stats">
           <Toggle value={timer.showStats} onChange={(v) => setTimer('showStats', v)} />
         </Row>
-        <Row label="ao5 / ao12 under the clock" description="Hidden while a solve is running either way.">
+        <Row label="ao5 / ao12 under the clock">
           <Toggle value={timer.showAverages} onChange={(v) => setTimer('showAverages', v)} />
         </Row>
         <Row label="scramble preview" description="The scramble drawn as a cube. Drag its title bar to move it, its top-left corner to resize.">
@@ -167,8 +175,8 @@ export default function SettingsPage({
         </Row>
 
         <Row
-          label="timer while solving"
-          description="What the clock shows mid-solve. The solve is always recorded in full."
+          label="timer update"
+          description="What the clock shows while solving."
         >
           <Choice
             options={[
@@ -183,7 +191,7 @@ export default function SettingsPage({
 
         <Row
           label="WCA inspection"
-          description="15 seconds before the solve, +2 over 15 and DNF over 17. Blindfolded events and FMC never inspect."
+          description="15 second inpection, with automatic penalty."
         >
           <Toggle value={timer.inspection} onChange={(v) => setTimer('inspection', v)} />
         </Row>
@@ -200,7 +208,7 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="hold to arm" description="Milliseconds space is held before the timer will start.">
+        <Row label="hold to arm" description="How many milliseconds space is held in order to arm timer."> 
           <Stepper
             value={timer.holdMs} min={0} max={1000} step={50}
             format={plain}
@@ -208,7 +216,7 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="decimals">
+        <Row label="how decimals are shown">
           <Choice
             options={[{ id: '2', name: '12.34' }, { id: '3', name: '12.345' }]}
             value={timer.decimals === 3 ? '3' : '2'}
@@ -221,7 +229,7 @@ export default function SettingsPage({
       <section className="settings-group">
         <h2 className="panel-title">appearance</h2>
 
-        <Row label="theme" description="Colours for the whole app, timer included.">
+        <Row label="theme">
           <div className="theme-grid">
             {THEMES.map((theme) => (
               <button
@@ -251,7 +259,7 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="timer font" description="Only the clock. A monospaced face stops the digits dancing.">
+        <Row label="timer font">
           <Choice
             options={FONTS}
             value={appearance.timerFont}
@@ -259,7 +267,7 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="text size" description="Percent of the standard size.">
+        <Row label="text size">
           <Stepper
             value={Math.round(appearance.fontScale * 100)} min={85} max={140} step={5}
             format={plain}
@@ -269,7 +277,6 @@ export default function SettingsPage({
 
         <Row
           label="background picture"
-          description="Yours, from this device. Kept out of the way of your solve history."
         >
           <div className="actions">
             <button type="button" onClick={() => picker.current?.click()}>
@@ -292,7 +299,7 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="background blur" description="Pixels.">
+        <Row label="background blur">
           <Stepper
             value={appearance.bgBlur} min={0} max={24} step={2}
             format={plain}
@@ -300,7 +307,7 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="background dim" description="How far the picture fades back so text stays readable, as a percent.">
+        <Row label="background dim">
           <Stepper
             value={Math.round(appearance.bgDim * 100)} min={0} max={90} step={5}
             format={plain}
@@ -308,7 +315,7 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="panel opacity" description="How much of the picture shows through the panels, as a percent.">
+        <Row label="panel opacity">
           <Stepper
             value={Math.round(appearance.panelOpacity * 100)} min={25} max={100} step={5}
             format={plain}
@@ -316,7 +323,7 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="panel blur" description="Frosts whatever is behind a see-through panel. Pixels.">
+        <Row label="panel blur">
           <Stepper
             value={appearance.panelBlur} min={0} max={24} step={2}
             format={plain}
@@ -328,6 +335,8 @@ export default function SettingsPage({
       <section className="settings-group">
         <h2 className="panel-title">data</h2>
         <DataSection />
+        <h2 className="panel-title">csTimer</h2>
+        <CsTimerImport store={timerStore} onImport={onTimerStore} onOpenTimer={onOpenTimer} />
       </section>
     </div>
   )

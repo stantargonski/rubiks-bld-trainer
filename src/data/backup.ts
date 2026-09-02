@@ -1,3 +1,4 @@
+import { describeBytes, MAX_FILE_BYTES, STORE_BUDGET } from './limits';
 import { migrate as migratePairs, PAIRS_KEY } from '../bld/letterPairs/storage';
 import { CFOP_KEY, normalizeCfopStore } from '../cfop/storage';
 import { readSettings, SETTINGS_KEY } from '../settings/defaults';
@@ -143,6 +144,12 @@ export interface ImportReport {
  * and you can see exactly what didn't come back.
  */
 export async function importAll(text: string): Promise<ImportReport> {
+  // Checked before it is parsed: a file this size is not a backup, and finding
+  // that out should not cost a hundred megabytes of parse tree first.
+  if (text.length > MAX_FILE_BYTES) {
+    throw new Error(`That file is larger than ${describeBytes(MAX_FILE_BYTES)} — too big to be a backup.`);
+  }
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -163,6 +170,8 @@ export async function importAll(text: string): Promise<ImportReport> {
   const data = (backup.data ?? {}) as Record<string, unknown>;
   const results: ImportReport['results'] = [];
   let restored = 0;
+  /** Characters of JSON written so far, against the one budget they share. */
+  let spent = 0;
 
   for (const slot of SLOTS) {
     if (!(slot.key in data)) {
@@ -182,7 +191,19 @@ export async function importAll(text: string): Promise<ImportReport> {
       continue;
     }
 
-    localStorage.setItem(slot.key, JSON.stringify(accepted));
+    // Every slot has passed its own reader by now, which says the shape is
+    // right but nothing about the size. localStorage answers an oversized write
+    // by throwing, and it throws on the *next* write too, so one slot that does
+    // not fit would take the rest of the restore down with it.
+    const encoded = JSON.stringify(accepted);
+    spent += encoded.length;
+    if (spent > STORE_BUDGET) {
+      spent -= encoded.length;
+      results.push({ key: slot.key, label: slot.label, outcome: 'rejected' });
+      continue;
+    }
+
+    localStorage.setItem(slot.key, encoded);
     results.push({ key: slot.key, label: slot.label, outcome: 'restored' });
     restored += 1;
   }

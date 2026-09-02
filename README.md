@@ -28,3 +28,21 @@ npm install
 npm run dev
 ```
 
+
+
+## Bringing your csTimer history with you
+
+Settings → csTimer takes the file csTimer writes from **wrench icon → Export → Export to file**.
+Drop it on the panel or pick it, and every session in it is listed with its solve count and dates.
+For each one you choose three things: the **event** (csTimer only records which scrambler a session
+used, so this is a guess worth checking), **where** the solves go — a new session, or added to one
+you already have — and what a new session is **called**. Untick anything you don't want. Nothing is
+written until you press import, and then a receipt says exactly what landed where.
+
+Times, scrambles, dates, +2s, DNFs and BLD memo splits from multi-phase sessions all come across;
+solve comments don't. Appending to an existing session skips solves it already has, so re-importing
+an updated export picks up only what is new. Nothing already in the timer is ever replaced.
+
+Imported files are treated as untrusted — sizes, names, times and dates are all bounded before
+anything is stored, and an import too large for the browser's storage is refused rather than
+half-written. `src/data/limits.ts` says what is bounded and why.

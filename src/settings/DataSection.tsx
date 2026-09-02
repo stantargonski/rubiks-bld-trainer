@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { downloadText, exportAll, importAll, stamp, type ImportReport } from '../data/backup'
+import { describeBytes, MAX_FILE_BYTES, tooBig } from '../data/limits'
 
 /**
  * Backup and restore for everything the app has stored.
@@ -24,6 +25,14 @@ export default function DataSection() {
   async function load(file: File) {
     setError(null)
     setReport(null)
+
+    // Refused on the size alone, before a byte of it is read: a file this big
+    // is not a backup, and reading it to find that out is the expensive way to
+    // learn it.
+    if (tooBig(file.size)) {
+      setError(`That file is ${describeBytes(file.size)}, past the ${describeBytes(MAX_FILE_BYTES)} limit for a backup.`)
+      return
+    }
 
     try {
       setReport(await importAll(await file.text()))
