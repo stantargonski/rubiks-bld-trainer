@@ -11,11 +11,17 @@ interface AverageDetailProps extends AverageView {
   onClose: () => void
 }
 
-export default function AverageDetail({ label, solves, decimals, onClose }: AverageDetailProps) {
+export default function AverageDetail(
+  { label, solves, value, decimals, onClose }: AverageDetailProps,
+) {
   const box = useRef<HTMLTextAreaElement>(null)
+  const sheet = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
 
-  const text = useMemo(() => averageText(label, solves, decimals), [label, solves, decimals])
+  const text = useMemo(
+    () => averageText(label, solves, decimals, value),
+    [label, solves, decimals, value],
+  )
 
   // Already selected on the way in, so the fastest way out of here is Ctrl+C —
   // the same trick the session rename uses to make typing replace the old name.
@@ -26,7 +32,39 @@ export default function AverageDetail({ label, solves, decimals, onClose }: Aver
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        onClose()
+        return
+      }
+
+      // `ok` is painted as the default action, so Enter should be it. Safe from
+      // inside the text box because that box is readOnly — Enter does nothing
+      // there today. A focused button keeps its own Enter, or the only way to
+      // reach `copy` by keyboard would be to press it and get `ok` instead.
+      if (event.key === 'Enter') {
+        const active = document.activeElement
+        if (active instanceof HTMLButtonElement && sheet.current?.contains(active)) return
+        event.preventDefault()
+        onClose()
+        return
+      }
+
+      // Tab cycles inside the sheet rather than walking off into the page
+      // behind it: textarea, ok, export csv, copy, and back round.
+      if (event.key === 'Tab') {
+        const items = Array.from(
+          sheet.current?.querySelectorAll<HTMLElement>('textarea, button') ?? [],
+        )
+        if (items.length === 0) return
+
+        const at = items.indexOf(document.activeElement as HTMLElement)
+        const next = event.shiftKey
+          ? (at <= 0 ? items.length - 1 : at - 1)
+          : (at === items.length - 1 || at === -1 ? 0 : at + 1)
+
+        event.preventDefault()
+        items[next].focus()
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -58,6 +96,7 @@ export default function AverageDetail({ label, solves, decimals, onClose }: Aver
     <div className="modal-back" onClick={onClose}>
       <div
         className="modal"
+        ref={sheet}
         role="dialog"
         aria-modal="true"
         aria-label={`${label} detail`}
@@ -65,7 +104,7 @@ export default function AverageDetail({ label, solves, decimals, onClose }: Aver
       >
         <h2 className="modal-title">
           {label}
-          <b>{formatTime(trimmedAverage(solves.map(effectiveMs)), decimals)}</b>
+          <b>{formatTime(value ?? trimmedAverage(solves.map(effectiveMs)), decimals)}</b>
         </h2>
 
         <textarea className="modal-text" ref={box} readOnly value={text} spellCheck={false} />

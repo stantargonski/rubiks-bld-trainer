@@ -20,11 +20,32 @@ import { effectiveMs, type Solve } from './types';
 export interface AverageView {
   label: string;
   solves: Solve[];
+  /**
+   * The headline figure, when it isn't the trimmed average of `solves`.
+   *
+   * A window of one — the best single — trims to nothing and would otherwise
+   * read as an em dash, and a selection of solves picked by hand has no average
+   * worth quoting at all. Left out, the average is computed as before.
+   */
+  value?: number;
 }
 
-export function averageText(label: string, solves: Solve[], decimals: 2 | 3): string {
+/** Local calendar date as `2026-09-02`. Not toLocaleDateString: this ends up in
+    text people paste somewhere else, where an unlabelled 03/09 is ambiguous. */
+function dateStamp(when: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}`;
+}
+
+export function averageText(
+  label: string,
+  solves: Solve[],
+  decimals: 2 | 3,
+  value?: number,
+  takenAt: Date = new Date(),
+): string {
   const times = solves.map(effectiveMs);
-  const result = trimmedAverage(times);
+  const result = value ?? trimmedAverage(times);
 
   // Which entries the average dropped, by position rather than by value: two
   // solves can tie on time, and only one of them was trimmed.
@@ -49,5 +70,14 @@ export function averageText(label: string, solves: Solve[], decimals: 2 | 3): st
     return `${number}. ${shown[index].padEnd(timeWidth)}  ${solve.scramble}`.trimEnd();
   });
 
-  return [`${label}: ${formatTime(result, decimals)}`, '', ...lines].join('\n');
+  // Where the block came from, at the bottom. A pasted average outlives the
+  // conversation it was pasted into, and "which timer, and when" is the context
+  // that goes missing first.
+  return [
+    `${label}: ${formatTime(result, decimals)}`,
+    '',
+    ...lines,
+    '',
+    `From tstimer, taken on ${dateStamp(takenAt)}`,
+  ].join('\n');
 }

@@ -119,6 +119,9 @@ export interface Appearance {
   bgDim: number;
   /** Whether a picture is waiting in IndexedDB. The picture itself never lives here. */
   hasBackground: boolean;
+  /** Top bar collapsed to just the wordmark. Lives here rather than in the timer
+      settings because the bar belongs to every section, not to the timer. */
+  topBarStowed: boolean;
 }
 
 export const DEFAULT_APPEARANCE: Appearance = {
@@ -132,6 +135,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   bgBlur: 0,
   bgDim: 0.45,
   hasBackground: false,
+  topBarStowed: false,
 };
 
 export const APPEARANCE_KEY = 'app.appearance.v1';
@@ -180,6 +184,12 @@ export function readAppearance(input: unknown): Appearance {
     hasBackground: typeof parsed.hasBackground === 'boolean'
       ? parsed.hasBackground
       : DEFAULT_APPEARANCE.hasBackground,
+    // New field, no schemaVersion bump: an older blob simply arrives without it
+    // and takes the default. That is the whole reason these are read one at a
+    // time instead of spread.
+    topBarStowed: typeof parsed.topBarStowed === 'boolean'
+      ? parsed.topBarStowed
+      : DEFAULT_APPEARANCE.topBarStowed,
   };
 }
 

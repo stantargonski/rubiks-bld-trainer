@@ -164,7 +164,22 @@ export function totalTime(solves: Solve[]): number {
 
 /** The best rolling average of `size` anywhere in the session. */
 export function bestAverage(solves: Solve[], size: number): number {
-  if (solves.length < size) return NaN;
+  return bestAverageWindow(solves, size).value;
+}
+
+/**
+ * The same search, keeping the window it won on.
+ *
+ * `bestAverage` threw the index away, which made the figure a dead end: the
+ * best ao12 you ever hit is exactly the one you'd want to open and read the
+ * solves behind. `start` is -1 when there is no answer, so a caller can tell
+ * "not enough solves" from "the first window".
+ */
+export function bestAverageWindow(
+  solves: Solve[],
+  size: number,
+): { value: number; start: number } {
+  if (solves.length < size) return { value: NaN, start: -1 };
 
   // Reduced to effective times once for the whole session rather than once per
   // window. Going through `average` sliced the solves, sliced the copy again,
@@ -173,11 +188,37 @@ export function bestAverage(solves: Solve[], size: number): number {
   const times = solves.map(effectiveMs);
 
   let lowest = Infinity;
+  let at = 0;
   for (let start = 0; start + size <= times.length; start += 1) {
     const value = trimmedAverage(times.slice(start, start + size));
-    if (value < lowest) lowest = value;
+    if (value < lowest) {
+      lowest = value;
+      at = start;
+    }
   }
-  return lowest;
+  return { value: lowest, start: at };
+}
+
+/**
+ * Which solve is the best single, as an index.
+ *
+ * The counterpart to `best`, for the same reason `bestAverageWindow` exists:
+ * the figure is worth clicking and a bare number can't be. -1 when there is
+ * nothing to point at, including an all-DNF session — there is no best solve
+ * there to open, only a best *result*, which is DNF.
+ */
+export function bestSingleIndex(solves: Solve[]): number {
+  let lowest = Infinity;
+  let at = -1;
+
+  for (let index = 0; index < solves.length; index += 1) {
+    const value = effectiveMs(solves[index]);
+    if (Number.isFinite(value) && value < lowest) {
+      lowest = value;
+      at = index;
+    }
+  }
+  return at;
 }
 
 /**

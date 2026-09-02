@@ -292,6 +292,9 @@ export function solveLine(solve: Solve, decimals: Decimals): string {
     stamped,
     eventOf(solve.event).name,
     solve.scramble,
+    // Same reason the average block carries one: a line pasted into a chat
+    // loses every bit of context except what's written in it.
+    `— from tstimer, taken on ${stamp()}`,
   ].join('  ');
 }
 

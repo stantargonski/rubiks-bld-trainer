@@ -134,19 +134,46 @@ export default function App() {
     <div className="app">
       <div className="app-bg" />
 
-      <header className="topbar">
-       <span className="brand">tstimer</span>
-       <nav className="nav">
-        {SECTIONS.map((item) => (
-          <button
-            key={item.id}
-            aria-current={section === item.id}
-            onClick={() => setSection(item.id)}
-          >
-            {item.label}
-            </button>
-        ))}
-       </nav>
+      <header className={appearance.topBarStowed ? 'topbar stowed' : 'topbar'}>
+       {/* The wordmark is the way back to the timer, the way a logo is on
+           every other site. It stays put when the bar is stowed. */}
+       <button
+         type="button"
+         className="brand"
+         onClick={() => setSection('timer')}
+         title="back to the timer"
+       >
+         tstimer
+       </button>
+       {!appearance.topBarStowed && (
+         <nav className="nav">
+          {SECTIONS.map((item) => (
+            <button
+              key={item.id}
+              aria-current={section === item.id}
+              onClick={() => setSection(item.id)}
+            >
+              {item.label}
+              </button>
+          ))}
+         </nav>
+       )}
+
+       {/* Stows the bar down to the wordmark, which stays both because it is
+           the way back to the timer and because a bar with nothing in it reads
+           as a rendering fault rather than as a choice. */}
+       <button
+         type="button"
+         className="topbar-stow"
+         aria-expanded={!appearance.topBarStowed}
+         title={appearance.topBarStowed ? 'show the menu' : 'hide the menu'}
+         onClick={() => updateAppearance({
+           ...appearance,
+           topBarStowed: !appearance.topBarStowed,
+         })}
+       >
+         {appearance.topBarStowed ? '⌄' : '⌃'}
+       </button>
       </header>
 
       {saveError && <p className="save-error" role="alert">{saveError}</p>}

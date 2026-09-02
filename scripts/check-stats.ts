@@ -12,7 +12,8 @@
  */
 import { FORMATS, resultOf } from '../src/timer/comp';
 import {
-  average, best, bestAverage, mean, rollingAverages, stdev, trimCount, trimmedAverage,
+  average, best, bestAverage, bestAverageWindow, bestSingleIndex, mean, rollingAverages,
+  stdev, trimCount, trimmedAverage,
 } from '../src/timer/stats';
 import type { Penalty, Solve } from '../src/timer/types';
 
@@ -128,6 +129,28 @@ const rolling = rollingAverages(hundred(0), 100);
 eq(rolling.length, 100, 'a rolling series is aligned with the solves');
 check(rolling.slice(0, 99).every(Number.isNaN), 'the rolling ao100 is blank until the hundredth');
 eq(rolling[99], average(hundred(0), 100), 'and its last point is the current ao100');
+
+// ---- the windows behind the figures ----
+// Every "best" on screen is now a link to the solves that made it, so the index
+// these return is as load-bearing as the value. A window that agreed on the
+// number but pointed at the wrong solves would be wrong in the one way nobody
+// would think to check.
+
+const bestFive = bestAverageWindow(RUN, 5);
+eq(bestFive.value, bestAverage(RUN, 5), 'the window search agrees with the plain best');
+eq(bestFive.start, 0, 'and reports where it found it');
+eq(
+  average(RUN.slice(bestFive.start, bestFive.start + 5), 5),
+  bestAverage(RUN, 5),
+  'the window it points at really does average to that',
+);
+eq(bestAverageWindow(RUN, 100).start, -1, 'no window at all when there are too few solves');
+eq(bestAverageWindow(RUN, 100).value, NaN, 'and no value with it');
+
+eq(bestSingleIndex(RUN), RUN.findIndex((solve) => solve.ms === 10_000), 'the best single by index');
+eq(bestSingleIndex(solvesOf([])), -1, 'no index without solves');
+// An all-DNF run has a best *result* — DNF — but no best solve to open.
+eq(bestSingleIndex(solvesOf(['dnf', 'dnf'])), -1, 'nothing to point at when every solve is a DNF');
 
 // ---- the rest of the panel, guarded against collateral damage ----
 

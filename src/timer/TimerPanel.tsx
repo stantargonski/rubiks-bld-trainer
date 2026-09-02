@@ -106,6 +106,15 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     }))
   }
 
+  /** One rewrite of the store for a whole selection, rather than one each. */
+  function deleteSolves(ids: number[]) {
+    const gone = new Set(ids)
+    updateActive((item) => ({
+      ...item,
+      solves: item.solves.filter((solve) => !gone.has(solve.id)),
+    }))
+  }
+
   function setEvent(id: EventId) {
     // The queue is not touched here: writing the session's event is what starts
     // it over, above, and that is the same path a session switch takes. Which
@@ -230,7 +239,8 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
                 solves={solves}
                 decimals={settings.decimals}
                 event={event}
-                onOpenAverage={(label, window) => setDetail({ label, solves: window })}
+                sessionId={session.id}
+                onOpenAverage={setDetail}
               />
             </div>
           )}
@@ -254,7 +264,8 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
                 decimals={settings.decimals}
                 onPenalty={setPenalty}
                 onDelete={deleteSolve}
-                onOpenAverage={(label, window) => setDetail({ label, solves: window })}
+                onDeleteMany={deleteSolves}
+                onOpenAverage={setDetail}
               />
             </div>
           )}
@@ -389,10 +400,11 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
               onSettings({ ...settings, previewWidth, previewHeight })}
             onMove={(previewRight, previewBottom) =>
               onSettings({ ...settings, previewRight, previewBottom })}
+            // Position only. The size is something you set once to suit your
+            // screen; the position is what gets knocked out of place dragging
+            // the panel about, so putting it back is what's worth one click.
             onReset={() => onSettings({
               ...settings,
-              previewWidth: DEFAULT_TIMER_SETTINGS.previewWidth,
-              previewHeight: DEFAULT_TIMER_SETTINGS.previewHeight,
               previewRight: DEFAULT_TIMER_SETTINGS.previewRight,
               previewBottom: DEFAULT_TIMER_SETTINGS.previewBottom,
             })}
@@ -404,6 +416,7 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
         <AverageDetail
           label={detail.label}
           solves={detail.solves}
+          value={detail.value}
           decimals={settings.decimals}
           onClose={() => setDetail(null)}
         />

@@ -127,7 +127,24 @@ const lines = block.split('\n');
 
 check(lines[0] === 'ao5: 13.53', `the block leads with the average, got "${lines[0]}"`);
 check(lines[1] === '', 'a blank line separates the average from its solves');
-check(lines.length === sample.length + 2, 'one line per solve, in the order they happened');
+// Header, blank, one line per solve, blank, provenance footer.
+check(lines.length === sample.length + 4, 'one line per solve, in the order they happened');
+check(lines[lines.length - 2] === '', 'a blank line separates the solves from the footer');
+check(
+  /^From tstimer, taken on \d{4}-\d{2}-\d{2}$/.test(lines[lines.length - 1]),
+  `the block says where it came from and when, got "${lines[lines.length - 1]}"`,
+);
+check(
+  averageText('ao5', sample, 2, undefined, new Date(2026, 0, 15))
+    .endsWith('From tstimer, taken on 2026-01-15'),
+  'the footer carries the date the block was taken',
+);
+// The reason the headline can be pinned at all: a one-solve window trims away
+// to nothing, so the average of it is not a number worth printing.
+check(
+  averageText('best single', [sample[0]], 2, 12340).split('\n')[0] === 'best single: 12.34',
+  'an explicit headline overrides the trimmed average',
+);
 // An ao5 trims one from each end: the 11.02 and the 15.01, and nothing else.
 check(
   lines.filter((line) => line.includes('(')).length === 2,

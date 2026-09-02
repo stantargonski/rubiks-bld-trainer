@@ -153,8 +153,8 @@ export default function ScramblePreview({
         <button
           type="button"
           className="preview-reset"
-          title="back to the default size and position"
-          aria-label="reset the scramble preview"
+          title="back to the default position"
+          aria-label="move the scramble preview back to its default position"
           // The title bar is the drag handle, so the press that starts this
           // click would otherwise start a drag underneath it.
           onPointerDown={(down) => down.stopPropagation()}

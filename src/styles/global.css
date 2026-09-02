@@ -117,9 +117,18 @@ textarea,
   backdrop-filter: blur(var(--panel-blur));
 }
 .brand {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font-family: inherit;
   font-weight: 800;
   letter-spacing: -0.02em;
   font-size: calc(17px * var(--font-scale));
+  cursor: pointer;
+}
+.brand:hover {
+  color: var(--accent);
 }
 .nav {
   display: flex;
@@ -964,10 +973,12 @@ textarea,
   text-decoration: line-through;
 }
 /* The average as it stood after that solve, not as it stands now — dimmed,
-   because it's context for the single beside it rather than a figure of its own. */
+   because it's context for the single beside it rather than a figure of its own.
+   Set at the same size as the time, though: three columns of numbers that are
+   meant to be read across don't line up if one of them is smaller. The colour
+   carries the hierarchy on its own. */
 .solve-ao {
   color: var(--text-dim);
-  font-size: calc(13px * var(--font-scale));
 }
 .solve-tag {
   margin-left: 4px;
@@ -2570,7 +2581,10 @@ textarea,
 
 /* ----- average detail ----- */
 /* A number worth clicking should say so without becoming a button: these are
-   figures in a table and a line under the clock, not controls. */
+   figures in a table and a line under the clock, not controls. No underline —
+   there are enough of these on screen at once that ruling every one of them
+   turned the stats into a page of links. The colour shift on hover is the
+   affordance, and it only costs anything at the moment you go looking. */
 .ao-open {
   padding: 0;
   background: none;
@@ -2578,15 +2592,13 @@ textarea,
   color: inherit;
   font: inherit;
   letter-spacing: inherit;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
-  text-underline-offset: 3px;
+  cursor: pointer;
 }
 .ao-open:hover {
-  text-decoration-color: var(--accent);
+  color: var(--accent);
 }
 .ao-open:disabled {
-  text-decoration: none;
+  color: inherit;
   cursor: default;
 }
 
@@ -2706,4 +2718,121 @@ textarea,
 }
 .data-snapshot .hint {
   margin: 0 0 10px;
+}
+
+/* Tab cycles inside the sheet, so where it has got to has to be visible. The
+   default ring is invisible against the accent fill on `ok`. */
+.modal-actions button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* ----- a figure that just became a record ----- */
+/* Green, briefly, in the `best` column. The animation ends on the ordinary text
+   colour rather than holding the green: this is an event, and a record that
+   stayed lit would read as a permanent label on the row instead. */
+@keyframes new-best {
+  0%, 60% {
+    color: var(--go);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--go) 60%, transparent);
+  }
+  100% {
+    color: var(--text);
+    text-shadow: none;
+  }
+}
+.stats td.new-best {
+  animation: new-best 2s ease-out;
+}
+.stats td.new-best .ao-open {
+  color: inherit;
+}
+/* The colour still lands; only the glow and the fade are dropped. */
+@media (prefers-reduced-motion: reduce) {
+  .stats td.new-best {
+    animation: none;
+    color: var(--go);
+  }
+}
+
+/* ----- picking several solves at once ----- */
+.solve-tools {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 9px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.timer-rail.flat .solve-tools {
+  background: transparent;
+}
+.solve-tools button {
+  padding: 4px 9px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 700;
+}
+.solve-tools button:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.solve-tools button:disabled {
+  opacity: 0.4;
+}
+.solve-tools button.danger:hover:not(:disabled) {
+  color: var(--holding);
+  border-color: var(--holding);
+}
+.solve-count {
+  margin-right: auto;
+  color: var(--text-dim);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.solve-row.picked {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+/* The second press of a delete. Filled rather than merely red: the point is
+   that it should not look like the button you just pressed. */
+.solve-actions .danger.armed {
+  background: var(--holding);
+  border-color: transparent;
+  color: #fff;
+}
+
+/* ----- stowing the top bar ----- */
+/* Short rather than gone. A bar that vanished entirely would take the way back
+   with it, and there would be nothing left to press to bring it back. */
+.topbar.stowed {
+  height: 30px;
+  gap: 0;
+}
+.topbar.stowed .brand {
+  font-size: calc(14px * var(--font-scale));
+}
+.topbar-stow {
+  margin-left: auto;
+  padding: 2px 10px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: calc(15px * var(--font-scale));
+  line-height: 1;
+  cursor: pointer;
+}
+.topbar-stow:hover {
+  color: var(--text);
+  background: var(--panel-2);
 }
