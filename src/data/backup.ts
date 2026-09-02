@@ -1,9 +1,11 @@
-import { migrate as migratePairs, PAIRS_KEY, SUGGESTIONS_KEY } from '../bld/letterPairs/storage';
+import { migrate as migratePairs, PAIRS_KEY } from '../bld/letterPairs/storage';
 import { CFOP_KEY, normalizeCfopStore } from '../cfop/storage';
 import { readSettings, SETTINGS_KEY } from '../settings/defaults';
 import { readTimerSettings, TIMER_SETTINGS_KEY } from '../timer/settings';
 import { migrate as migrateTimer, TIMER_KEY } from '../timer/storage';
-import { effectiveMs, execMs, type Session } from '../timer/types';
+import { effectiveMs, execMs, type Session, type Solve } from '../timer/types';
+import { eventOf } from '../timer/events';
+import { formatTime, type Decimals } from '../timer/format';
 import { APPEARANCE_KEY, readAppearance } from '../theme/theme';
 import {
   clearBackground, fromDataUrl, getBackground, putBackground, toDataUrl,
@@ -44,23 +46,11 @@ function looksLikeStore(value: unknown, versions: number[], field: string): bool
   );
 }
 
-function isWordMap(value: unknown): boolean {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  return Object.values(value).every(
-    (words) => Array.isArray(words) && words.every((word) => typeof word === 'string'),
-  );
-}
-
 const SLOTS: Slot[] = [
   {
     key: PAIRS_KEY,
     label: 'letter pairs',
     accept: (value) => (looksLikeStore(value, [1, 2], 'pairs') ? migratePairs(value) : null),
-  },
-  {
-    key: SUGGESTIONS_KEY,
-    label: 'image suggestions',
-    accept: (value) => (isWordMap(value) ? value : null),
   },
   {
     key: SETTINGS_KEY,
@@ -70,7 +60,7 @@ const SLOTS: Slot[] = [
   {
     key: TIMER_KEY,
     label: 'sessions and solves',
-    accept: (value) => (looksLikeStore(value, [1, 2, 3], 'sessions') ? migrateTimer(value) : null),
+    accept: (value) => (looksLikeStore(value, [1, 2, 3, 4], 'sessions') ? migrateTimer(value) : null),
   },
   {
     key: TIMER_SETTINGS_KEY,
@@ -234,7 +224,7 @@ export function sessionCsv(session: Session): string {
     ['no', 'event', 'time', 'penalty', 'effective', 'memo', 'exec', 'date', 'scramble'],
     ...session.solves.map((solve, index) => [
       String(index + 1),
-      session.event,
+      solve.event,
       seconds(solve.ms),
       solve.penalty,
       seconds(effectiveMs(solve)),
@@ -245,6 +235,25 @@ export function sessionCsv(session: Session): string {
     ]),
   ];
   return rows.map((row) => row.map(csvCell).join(',')).join('\n');
+}
+
+/**
+ * One solve as a line you can paste somewhere.
+ *
+ * Time, when, what puzzle, and the scramble — the four things that turn a
+ * number into a claim someone else can check. The date comes from the solve's
+ * own id, which is the millisecond it stopped, and it is written in local time
+ * because that is the day you remember solving on.
+ */
+export function solveLine(solve: Solve, decimals: Decimals): string {
+  const when = new Date(solve.id);
+  const stamped = `${when.toLocaleDateString()} ${when.toLocaleTimeString()}`;
+  return [
+    formatTime(effectiveMs(solve), decimals),
+    stamped,
+    eventOf(solve.event).name,
+    solve.scramble,
+  ].join('  ');
 }
 
 /** A filename-safe stamp: 2026-09-01. */

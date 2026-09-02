@@ -1,4 +1,5 @@
-import { faceOf, type CubeState, type Face } from './moves'
+import { useId } from 'react'
+import { faceOf, type Arrow, type CubeState, type Face } from './moves'
 import { faceOf as faceOfNxN, type CubeState as NxNState } from './nxn'
 import { FACE_COLOR } from './colors'
 
@@ -21,7 +22,12 @@ const FACE_ORIGIN: Record<Face, [number, number]> = {
 
 const FACES = Object.keys(FACE_ORIGIN) as Face[]
 
-function Sticker({ color, col, row }: { color: Face; col: number; row: number }) {
+function Sticker({ color, col, row, palette = FACE_COLOR }: {
+  color: Face
+  col: number
+  row: number
+  palette?: Record<Face, string>
+}) {
   return (
     <rect
       x={col + 0.06}
@@ -29,7 +35,7 @@ function Sticker({ color, col, row }: { color: Face; col: number; row: number })
       width={0.88}
       height={0.88}
       rx={0.12}
-      fill={FACE_COLOR[color]}
+      fill={palette[color]}
     />
   )
 }
@@ -66,13 +72,31 @@ export function CubeNetView({ state, label }: { state: CubeState; label?: string
  * read in the direction you'd see them from up here rather than in face order —
  * looking at B, its top row runs right-to-left across this view, and the same
  * goes for R down the side.
+ *
+ * `palette` recolours the faces — CFOP passes the yellow-top view. `arrows` are
+ * drawn over the top: which piece goes where, which is the half of a case the
+ * colours can't tell you, because four yellow stickers are the same yellow.
  */
-export function CubeTopView({ state, label }: { state: CubeState; label?: string }) {
+export function CubeTopView({ state, arrows = [], palette = FACE_COLOR, label }: {
+  state: CubeState
+  arrows?: Arrow[]
+  palette?: Record<Face, string>
+  label?: string
+}) {
+  // Marker ids are document-global, so two diagrams sharing one would have the
+  // second silently steal the first's arrowheads.
+  const head = `arrow-${useId()}`
+
   const up = faceOf(state, 'U')
   const front = faceOf(state, 'F')
   const back = faceOf(state, 'B')
   const left = faceOf(state, 'L')
   const right = faceOf(state, 'R')
+
+  /** The centre of U cell 0-8, in the 5x5 grid this is drawn on. */
+  function centre(cell: number): [number, number] {
+    return [1.5 + (cell % 3), 1.5 + Math.floor(cell / 3)]
+  }
 
   return (
     <svg
@@ -81,22 +105,52 @@ export function CubeTopView({ state, label }: { state: CubeState; label?: string
       role="img"
       aria-label={label ?? 'last layer'}
     >
+      <defs>
+        <marker
+          id={head}
+          markerWidth={4}
+          markerHeight={4}
+          refX={3.2}
+          refY={2}
+          orient="auto"
+        >
+          <path d="M 0 0.5 L 3.4 2 L 0 3.5 z" className="arrow-head" />
+        </marker>
+      </defs>
+
       {up.map((color, cell) => (
-        <Sticker key={`u${cell}`} color={color} col={1 + (cell % 3)} row={1 + Math.floor(cell / 3)} />
+        <Sticker key={`u${cell}`} color={color} palette={palette} col={1 + (cell % 3)} row={1 + Math.floor(cell / 3)} />
       ))}
 
       {[0, 1, 2].map((i) => (
-        <Sticker key={`b${i}`} color={back[2 - i]} col={1 + i} row={0} />
+        <Sticker key={`b${i}`} color={back[2 - i]} palette={palette} col={1 + i} row={0} />
       ))}
       {[0, 1, 2].map((i) => (
-        <Sticker key={`f${i}`} color={front[i]} col={1 + i} row={4} />
+        <Sticker key={`f${i}`} color={front[i]} palette={palette} col={1 + i} row={4} />
       ))}
       {[0, 1, 2].map((i) => (
-        <Sticker key={`l${i}`} color={left[i]} col={0} row={1 + i} />
+        <Sticker key={`l${i}`} color={left[i]} palette={palette} col={0} row={1 + i} />
       ))}
       {[0, 1, 2].map((i) => (
-        <Sticker key={`r${i}`} color={right[2 - i]} col={4} row={1 + i} />
+        <Sticker key={`r${i}`} color={right[2 - i]} palette={palette} col={4} row={1 + i} />
       ))}
+
+      {arrows.map((arrow) => {
+        const [x1, y1] = centre(arrow.from)
+        const [x2, y2] = centre(arrow.to)
+        return (
+          <line
+            key={`${arrow.from}-${arrow.to}`}
+            className={`case-arrow ${arrow.kind}`}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            markerEnd={`url(#${head})`}
+            markerStart={arrow.both ? `url(#${head})` : undefined}
+          />
+        )
+      })}
     </svg>
   )
 }

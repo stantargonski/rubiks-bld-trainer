@@ -3,7 +3,7 @@ import DataSection from './DataSection'
 import TimerPreview from './TimerPreview'
 import { FONTS, THEMES, type Appearance } from '../theme/theme'
 import { clearBackground, downscale, putBackground } from '../theme/imageStore'
-import { PREVIEW_MAX, PREVIEW_MIN, type TimerSettings } from '../timer/settings'
+import type { TimerSettings } from '../timer/settings'
 
 /**
  * One row: what the setting is on the left, the control on the right.
@@ -153,7 +153,7 @@ export default function SettingsPage({
         <Row label="ao5 / ao12 under the clock" description="Hidden while a solve is running either way.">
           <Toggle value={timer.showAverages} onChange={(v) => setTimer('showAverages', v)} />
         </Row>
-        <Row label="scramble preview" description="The scramble drawn as a cube, bottom right. Drag its corner to resize.">
+        <Row label="scramble preview" description="The scramble drawn as a cube. Drag its title bar to move it, its top-left corner to resize.">
           <Toggle value={timer.showCubeNet} onChange={(v) => setTimer('showCubeNet', v)} />
         </Row>
         <Row
@@ -216,20 +216,6 @@ export default function SettingsPage({
           />
         </Row>
 
-        <Row label="preview size" description="Width and height in pixels. Dragging the panel's corner does the same thing.">
-          <div className="pair-control">
-            <Stepper
-              value={timer.previewWidth} min={PREVIEW_MIN} max={PREVIEW_MAX} step={20}
-              format={plain}
-              onChange={(value) => setTimer('previewWidth', value)}
-            />
-            <Stepper
-              value={timer.previewHeight} min={PREVIEW_MIN} max={PREVIEW_MAX} step={20}
-              format={plain}
-              onChange={(value) => setTimer('previewHeight', value)}
-            />
-          </div>
-        </Row>
       </section>
 
       <section className="settings-group">

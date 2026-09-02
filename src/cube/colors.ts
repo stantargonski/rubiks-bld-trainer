@@ -18,3 +18,21 @@ export const FACE_COLOR: Record<Face, string> = {
   L: 'var(--cube-l)',
   B: 'var(--cube-b)',
 };
+
+/**
+ * The same cube seen the way alg sheets draw the last layer: yellow on top.
+ *
+ * An x2 of the standard scheme, so it is a real cube rather than a recolouring
+ * — every sticker is where a legal rotation would put it. Yellow is on top
+ * because that is where it is when you get to the last layer with a white
+ * cross, and a diagram that disagrees with the cube in your hands is one more
+ * thing to translate at exactly the moment you can least afford to.
+ */
+export const LAST_LAYER_COLOR: Record<Face, string> = {
+  U: 'var(--cube-d)',
+  D: 'var(--cube-u)',
+  F: 'var(--cube-b)',
+  B: 'var(--cube-f)',
+  L: 'var(--cube-l)',
+  R: 'var(--cube-r)',
+};

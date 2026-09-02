@@ -20,21 +20,6 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
         <div className="timer-frame">
           {settings.showSolveList && (
             <aside className="timer-rail">
-              <div className="rail-head">
-                <span className="session-select">3x3x3 (24)</span>
-              </div>
-              <div className="rail-list">
-                <ol className="solve-list">
-                  {[12.34, 13.91, 11.08, 14.62, 12.77].map((time, index) => (
-                    <li key={time}>
-                      <span className="solve-row">
-                        <span className="solve-n">{5 - index}</span>
-                        <span className="solve-t">{time.toFixed(settings.decimals)}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
               {settings.showStats && (
                 <div className="rail-stats">
                   <table className="stats">
@@ -45,6 +30,23 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
                   </table>
                 </div>
               )}
+              <div className="rail-head">
+                <span className="session-select">3x3x3</span>
+              </div>
+              <div className="rail-list">
+                <ol className="solve-list">
+                  {[12.34, 13.91, 11.08, 14.62, 12.77].map((time, index) => (
+                    <li key={time}>
+                      <span className="solve-row">
+                        <span className="solve-n">{5 - index}</span>
+                        <span className="solve-t">{time.toFixed(settings.decimals)}</span>
+                        <span className="solve-ao">12.88</span>
+                        <span className="solve-ao">13.20</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </aside>
           )}
 
@@ -78,7 +80,12 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
               {settings.showCubeNet && (
                 <div
                   className="scramble-preview"
-                  style={{ width: settings.previewWidth, height: settings.previewHeight }}
+                  style={{
+                    width: settings.previewWidth,
+                    height: settings.previewHeight,
+                    right: settings.previewRight,
+                    bottom: settings.previewBottom,
+                  }}
                 >
                   <span className="preview-title">3x3 scramble</span>
                   <div className="preview-body"><div className="preview-stub" /></div>

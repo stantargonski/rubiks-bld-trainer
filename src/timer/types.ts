@@ -10,6 +10,10 @@ export interface Solve {
   memoMs: number | null;
   penalty: Penalty;
   scramble: string;
+  /** Which event this was timed under. Stored per solve rather than read off the
+      session, so switching a session's event never re-files the history behind it
+      and an all-time best can be asked of the solves themselves. */
+  event: EventId;
 }
 
 export interface Session {
@@ -26,7 +30,7 @@ export interface Session {
 }
 
 export interface TimerStore {
-  schemaVersion: 3;
+  schemaVersion: 4;
   sessions: Session[];
   activeId: string;
 }
@@ -54,9 +58,10 @@ export function newSolve(
   ms: number,
   memoMs: number | null,
   scramble: string,
+  event: EventId,
   penalty: Penalty = 'none',
 ): Solve {
-  return { id: Date.now(), ms, memoMs, penalty, scramble };
+  return { id: Date.now(), ms, memoMs, penalty, scramble, event };
 }
 
 /**
@@ -78,7 +83,7 @@ export function newSession(name: string, event: EventId = DEFAULT_EVENT, seed = 
 /** Ten empty sessions, one per common event, with 3x3 open. */
 export function emptyTimerStore(): TimerStore {
   const sessions = STARTER_EVENTS.map((id, index) => newSession(eventOf(id).name, id, index));
-  return { schemaVersion: 3, sessions, activeId: sessions[0].id };
+  return { schemaVersion: 4, sessions, activeId: sessions[0].id };
 }
 
 /** Storage guarantees at least one session, so this always returns one. */

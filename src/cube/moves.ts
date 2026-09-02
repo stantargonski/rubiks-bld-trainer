@@ -161,47 +161,145 @@ export function isSolved(state: CubeState): boolean {
   return state.every((face, i) => face === solved[i]);
 }
 
-/** The U-layer side stickers: the ring you actually recognise a case from. */
-const RING = [9, 10, 11, 18, 19, 20, 36, 37, 38, 45, 46, 47];
-
-/**
- * The same case, turned to the angle it's normally drawn at.
- *
- * Plenty of good algs finish with the last layer rotated — they solve the case
- * and leave you an AUF, which costs nothing to fix on a real cube but means the
- * position they *create* is the case seen from a quarter turn off. Diagrams
- * drawn that way are unreadable for recognition, which is the entire point of
- * them.
- *
- * Rotating the U layer never changes which case you're looking at, so this is
- * free to do: of the four AUFs, take the one with the most side stickers
- * already home. That's the angle alg sheets use, because it's the angle where
- * whatever the case leaves solved lines up with the faces it belongs to.
- */
-export function alignLastLayer(state: CubeState): CubeState {
-  const solved = solvedCube();
-
-  let best = state;
-  let bestScore = -1;
-  let turned = state;
-
-  for (let i = 0; i < 4; i += 1) {
-    let score = 0;
-    for (const facelet of RING) {
-      if (turned[facelet] === solved[facelet]) score += 1;
-    }
-    // Strictly greater, so a tie keeps the alg's own orientation.
-    if (score > bestScore) {
-      bestScore = score;
-      best = turned;
-    }
-    turned = applyPerm(turned, MOVES.U);
-  }
-  return best;
-}
-
 /** The 9 facelets of one face, row-major. */
 export function faceOf(state: CubeState, face: Face): Face[] {
   const start = FACE_ORDER.indexOf(face) * 9;
   return state.slice(start, start + 9);
+}
+
+// ---- tracking where pieces came from, not just what colour they are ----
+
+/**
+ * A cube whose stickers are labelled by where they belong rather than by what
+ * colour they are: `labels[i]` is the home facelet of the sticker currently
+ * sitting at `i`.
+ *
+ * A colour can't answer "where does this piece go" — four stickers are yellow
+ * and it is the same yellow. Labels can, and a state falls straight back out of
+ * them (`labelsToState`), so one computation feeds both the diagram and the
+ * arrows over it instead of two that can disagree.
+ */
+export type Labels = number[];
+
+export function solvedLabels(): Labels {
+  return Array.from({ length: 54 }, (_, i) => i);
+}
+
+export function applyAlgLabels(labels: Labels, text: string): Labels {
+  let next = labels;
+  for (const token of parseAlg(text)) next = MOVES[token].map((from) => next[from]);
+  return next;
+}
+
+export function labelsToState(labels: Labels): CubeState {
+  return labels.map((label) => FACE_ORDER[Math.floor(label / 9)]);
+}
+
+/** The U-layer cells, minus the centre, split by what kind of piece they carry. */
+const U_CORNERS = [0, 2, 6, 8];
+const U_EDGES = [1, 3, 5, 7];
+
+/** The U-layer side stickers: the ring you actually recognise a case from. */
+const RING = [9, 10, 11, 18, 19, 20, 36, 37, 38, 45, 46, 47];
+
+/** The longest cycle `labels` puts these cells through. */
+function longestCycle(labels: Labels, cells: number[]): number {
+  let longest = 1;
+  const seen = new Set<number>();
+
+  for (const start of cells) {
+    if (seen.has(start)) continue;
+    let length = 0;
+    for (let cell = start; !seen.has(cell); cell = labels[cell]) {
+      seen.add(cell);
+      length += 1;
+      if (!cells.includes(labels[cell])) break;
+    }
+    longest = Math.max(longest, length);
+  }
+  return longest;
+}
+
+/**
+ * The case as a diagram: the alg undone, turned to the angle it's drawn at.
+ *
+ * Two things are being fixed here. Plenty of good algs finish with the last
+ * layer rotated — they solve the case and leave you an AUF, which costs nothing
+ * on a real cube but means the position they *create* is the case seen from a
+ * quarter turn off.
+ *
+ * And an AUF is not a neutral choice of angle. Turning U doesn't change which
+ * case you're looking at, but it does change what the pieces appear to be
+ * doing: a G perm framed one way is a corner 3-cycle and an edge 3-cycle, and
+ * framed a quarter turn over it is a corner swap and an edge 4-cycle. Both are
+ * the same case; only the first is how anyone draws or thinks about it. So the
+ * angle chosen is the one where the longest cycle is shortest — the simplest
+ * true description of the case — with the number of side stickers already home
+ * breaking ties, which is the angle alg sheets settle on for everything else.
+ */
+export function caseLabels(alg: string): Labels {
+  let turned = applyAlgLabels(solvedLabels(), invertAlg(alg));
+
+  let best = turned;
+  let bestScore: [number, number] = [Infinity, Infinity];
+
+  for (let turn = 0; turn < 4; turn += 1) {
+    const state = labelsToState(turned);
+    const home = RING.filter((facelet, ) => state[facelet] === FACE_ORDER[Math.floor(facelet / 9)]).length;
+    const score: [number, number] = [
+      Math.max(longestCycle(turned, U_CORNERS), longestCycle(turned, U_EDGES)),
+      -home,
+    ];
+    // Strictly better only, so a tie keeps the earliest angle and the picture
+    // is the same every time it's drawn.
+    if (score[0] < bestScore[0] || (score[0] === bestScore[0] && score[1] < bestScore[1])) {
+      bestScore = score;
+      best = turned;
+    }
+    turned = MOVES.U.map((from) => turned[from]);
+  }
+  return best;
+}
+
+/** One piece's journey when the alg is executed. */
+export interface Arrow {
+  /** U-face cell 0-8 it sits in now. */
+  from: number;
+  /** U-face cell 0-8 it ends up in. */
+  to: number;
+  kind: 'corner' | 'edge';
+  /** True when the two swap, so one line with two heads says all of it. */
+  both: boolean;
+}
+
+/**
+ * Where each last-layer piece goes, as arrows over the U face.
+ *
+ * `labels[i]` is the home of the sticker at `i`, and executing the alg is
+ * exactly the act of sending it home — so the arrow is `i → labels[i]`, with no
+ * second pass over the cube needed to work it out.
+ *
+ * Mutual swaps collapse into one double-headed arrow rather than two arrows
+ * drawn on top of each other, which is both how alg sheets draw them and the
+ * difference between H perm reading as two lines and as four.
+ */
+export function lastLayerArrows(labels: Labels): Arrow[] {
+  const arrows: Arrow[] = [];
+
+  for (const [cells, kind] of [[U_CORNERS, 'corner'], [U_EDGES, 'edge']] as const) {
+    for (const from of cells) {
+      const to = labels[from];
+      // A piece already home, or one whose sticker left the U face entirely —
+      // which a PLL never does, but an OLL alg dropped in here would.
+      if (to === from || !cells.includes(to)) continue;
+
+      const both = labels[to] === from;
+      // One of the pair is enough when they swap; take the lower cell so which
+      // one is arbitrary but stable.
+      if (both && to < from) continue;
+
+      arrows.push({ from, to, kind, both });
+    }
+  }
+  return arrows;
 }
