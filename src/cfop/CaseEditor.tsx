@@ -1,19 +1,6 @@
-import { useEffect, useRef } from 'react'
-import { parseAlg } from '../cube/moves'
 import { CONFIDENCE_LABELS, type AlgCase, type CaseEntry, type Confidence } from './types'
 
 const LEVELS: Confidence[] = [0, 1, 2, 3]
-
-/** The parser's complaint, or null while the field is empty or valid. */
-function algError(alg: string): string | null {
-  if (alg.trim() === '') return null
-  try {
-    parseAlg(alg)
-    return null
-  } catch (error) {
-    return (error as Error).message
-  }
-}
 
 interface CaseEditorProps {
   item: AlgCase
@@ -21,36 +8,24 @@ interface CaseEditorProps {
   onChange: (entry: CaseEntry) => void
 }
 
+/**
+ * One case: the alg for it, and what you make of it.
+ *
+ * The alg is shown rather than typed. Every alg here is checked by
+ * `npm run check:algs` against the engine that draws the diagram beside it, and
+ * a field you can type into is a field that can hold something those two
+ * disagree with — a picture drawn from an alg with a typo in it is worse than
+ * no picture. Notes and confidence are yours; the algorithm is the site's.
+ */
 export default function CaseEditor({ item, entry, onChange }: CaseEditorProps) {
-  const algInput = useRef<HTMLInputElement>(null)
-
-  // Runs once per case: CfopPanel passes key={item.id}, so picking a different
-  // tile remounts this component and the effect fires again.
-  useEffect(() => {
-    algInput.current?.focus()
-  }, [])
-
-  const error = algError(entry.alg)
-  const overridden = entry.alg.trim() !== ''
-
   return (
     <div className="editor">
       <p className="code">{item.name}</p>
       <p className="kind">{item.group}</p>
 
-      <div className="fields">
-        <label className="field">
-          <span>your alg</span>
-          <input
-            ref={algInput}
-            value={entry.alg}
-            placeholder={item.alg}
-            spellCheck={false}
-            autoComplete="off"
-            onChange={(event) => onChange({ ...entry, alg: event.target.value })}
-          />
-        </label>
+      <p className="case-alg selectable">{item.alg}</p>
 
+      <div className="fields">
         <label className="field">
           <span>notes</span>
           <input
@@ -60,20 +35,6 @@ export default function CaseEditor({ item, entry, onChange }: CaseEditorProps) {
           />
         </label>
       </div>
-
-      {/* Typing is never blocked — a half-written alg is invalid for as long as
-          it takes to finish it. The diagram holds its last good state. */}
-      {error && <p className="case-error">{error}</p>}
-
-      <p className="case-default">
-        <span>shipped</span>
-        <b className="selectable">{item.alg}</b>
-        {overridden && (
-          <button type="button" className="ghost" onClick={() => onChange({ ...entry, alg: '' })}>
-            use it
-          </button>
-        )}
-      </p>
 
       <div className="chips">
         {LEVELS.map((level) => (
@@ -89,9 +50,7 @@ export default function CaseEditor({ item, entry, onChange }: CaseEditorProps) {
         ))}
       </div>
 
-      <p className="hint">
-        An empty alg means the shipped one, so an alg you type is never quietly replaced.
-      </p>
+      <p className="hint">The arrows on the diagram show where each piece goes.</p>
     </div>
   )
 }

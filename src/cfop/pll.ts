@@ -50,13 +50,15 @@ export const PLL_CASES: AlgCase[] = [
     alg: "R' U2 R U2 R' F R U R' U' R' F' R2" },
   { id: 'pll-f', set: 'pll', name: 'F', group: 'adjacent swap',
     alg: "R' U' F' R U R' U' R' F R2 U' R' U' R U R' U R" },
-  { id: 'pll-ga', set: 'pll', name: 'Ga', group: 'adjacent swap',
+
+  // ----- double 3-cycle: three corners round one way, three edges the other -----
+  { id: 'pll-ga', set: 'pll', name: 'Ga', group: 'double 3-cycle',
     alg: "R2 U R' U R' U' R U' R2 U' D R' U R D'" },
-  { id: 'pll-gb', set: 'pll', name: 'Gb', group: 'adjacent swap',
+  { id: 'pll-gb', set: 'pll', name: 'Gb', group: 'double 3-cycle',
     alg: "R' U' R U D' R2 U R' U R U' R U' R2 D" },
-  { id: 'pll-gc', set: 'pll', name: 'Gc', group: 'adjacent swap',
+  { id: 'pll-gc', set: 'pll', name: 'Gc', group: 'double 3-cycle',
     alg: "R2 U' R U' R U R' U R2 U D' R U' R' D" },
-  { id: 'pll-gd', set: 'pll', name: 'Gd', group: 'adjacent swap',
+  { id: 'pll-gd', set: 'pll', name: 'Gd', group: 'double 3-cycle',
     alg: "R U R' U' D R2 U' R U' R' U R' U R2 D'" },
 
   // ----- diagonal corner swap: the swapping corners are across from each other -----
@@ -75,5 +77,6 @@ export const PLL_GROUPS = [
   'edges only',
   'corners only',
   'adjacent swap',
+  'double 3-cycle',
   'diagonal swap',
 ] as const;

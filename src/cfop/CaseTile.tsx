@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
-import { alignLastLayer, applyAlg, invertAlg, solvedCube } from '../cube/moves'
+import { caseLabels, labelsToState, lastLayerArrows, solvedLabels } from '../cube/moves'
 import { CubeTopView } from '../cube/CubeView'
-import { activeAlg, caseLevel, type AlgCase, type CaseEntry } from './types'
+import { LAST_LAYER_COLOR } from '../cube/colors'
+import { caseLevel, type AlgCase, type CaseEntry } from './types'
 
 interface CaseTileProps {
   item: AlgCase
@@ -11,23 +12,23 @@ interface CaseTileProps {
 }
 
 export default function CaseTile({ item, entry, selected, onSelect }: CaseTileProps) {
-  const alg = activeAlg(item, entry)
-
   // The picture is the alg *undone* — the position you'd be staring at when the
   // case comes up, not the one executing it would produce — turned to the angle
   // the case is normally drawn at, since plenty of good algs leave an AUF.
-  // Falling back to the shipped alg keeps the diagram steady while a
-  // replacement is half-typed.
-  const state = useMemo(() => {
-    for (const candidate of [alg, item.alg]) {
-      try {
-        return alignLastLayer(applyAlg(solvedCube(), invertAlg(candidate)))
-      } catch {
-        // unparseable — try the shipped alg, then give up and show a solved cube
-      }
+  //
+  // Tracked as labels rather than as colours so the arrows fall out of the same
+  // computation as the stickers: `labels[i]` is where the piece at `i` belongs,
+  // which is both what colour to paint it and where to point.
+  const { state, arrows } = useMemo(() => {
+    try {
+      const labels = caseLabels(item.alg)
+      return { state: labelsToState(labels), arrows: lastLayerArrows(labels) }
+    } catch {
+      // An unparseable alg is a bug `npm run check:algs` catches, not something
+      // to blank the grid over: show a solved cube and no arrows.
+      return { state: labelsToState(solvedLabels()), arrows: [] }
     }
-    return solvedCube()
-  }, [alg, item.alg])
+  }, [item.alg])
 
   return (
     <button
@@ -36,7 +37,12 @@ export default function CaseTile({ item, entry, selected, onSelect }: CaseTilePr
       aria-pressed={selected}
       onClick={onSelect}
     >
-      <CubeTopView state={state} label={`${item.name} permutation`} />
+      <CubeTopView
+        state={state}
+        arrows={arrows}
+        palette={LAST_LAYER_COLOR}
+        label={`${item.name} permutation`}
+      />
       <span className="case-name">{item.name}</span>
     </button>
   )
