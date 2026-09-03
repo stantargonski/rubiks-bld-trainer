@@ -25,11 +25,20 @@ export interface TimerOptions {
     split?: boolean
     /** Run a 15-second inspection before the solve. */
     inspection?: boolean
+    /**
+     * Whether the space bar runs the clock at all.
+     *
+     * Off for typed entry, where there is no clock on screen to run: the phase
+     * would still advance on a space pressed outside the entry box, hiding the
+     * interface for a solve nobody can see is in progress and that no key can
+     * end once focus lands back in the box.
+     */
+    enabled?: boolean
 }
 
 export function useTimer(
     onStop: (ms: number, memoMs: number | null, penalty: Penalty) => void,
-    { holdMs = 400, split = false, inspection = false }: TimerOptions = {},
+    { holdMs = 400, split = false, inspection = false, enabled = true }: TimerOptions = {},
 ) {
     const [phase , setPhase] = useState<Phase>('idle')
     const [ms, setMs] = useState(0)
@@ -139,13 +148,15 @@ export function useTimer(
                 setPhase(inspection && inspectAt.current > 0 ? 'inspecting' : 'idle')
             }
         }
+        if (!enabled) return
+
         document.addEventListener('keydown', onKeyDown)
         document.addEventListener('keyup', onKeyUp)
         return () => {
             document.removeEventListener('keydown', onKeyDown)
             document.removeEventListener('keyup', onKeyUp)
         }
-    }, [phase, split, inspection])
+    }, [phase, split, inspection, enabled])
 
     useEffect(() => {
         if (phase !== 'holding') return

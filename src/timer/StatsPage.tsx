@@ -14,6 +14,77 @@ import type { AverageView } from './averageText'
 import { DAY, RANGES, SPANS, type Range } from './charts/ranges'
 import { BENCH_MAX, type TimerSettings } from './settings'
 
+/**
+ * One of the two figures you'd quote someone, across the events you've chosen.
+ *
+ * Both cards ask the same question of the same events — one of a single, one of
+ * an average — so both are this, and both carry the same picker. The list they
+ * edit is one setting, so ticking an event in either updates both strips at
+ * once; that is the point, not a collision.
+ *
+ * Declared out here rather than inside the page: a component built during a
+ * render is a new component every render, and React throws its state away each
+ * time — which for this one means the picker closing on every keystroke
+ * elsewhere on the page.
+ */
+function BenchCard({ title, bench, valueFor, decimals, onToggle }: {
+  title: string
+  bench: EventId[]
+  valueFor: (id: EventId) => number
+  decimals: 2 | 3
+  onToggle: (id: EventId) => void
+}) {
+  /** Whether this strip's event picker is open. */
+  const [picking, setPicking] = useState(false)
+
+  return (
+    <section className="card">
+      <div className="bench-strip">
+        <h2 className="bench-title">{title}</h2>
+        {bench.map((id) => (
+          <div className="bench" key={id}>
+            <span className="bench-label">{eventOf(id).short}</span>
+            <strong className="bench-value">{formatTime(valueFor(id), decimals)}</strong>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="bench-edit"
+          aria-expanded={picking}
+          onClick={() => setPicking(!picking)}
+        >
+          {picking ? 'done' : 'edit'}
+        </button>
+      </div>
+
+      {picking && (
+        <div className="bench-picker">
+          <p>
+            Up to {BENCH_MAX}, so the row stays one line and the figures stay
+            the size you'd quote them at. The other card shows the same events.
+          </p>
+          <div className="bench-options">
+            {EVENTS.map((item) => {
+              const on = bench.includes(item.id)
+              return (
+                <label key={item.id} className={on ? 'bench-option on' : 'bench-option'}>
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={!on && bench.length >= BENCH_MAX}
+                    onChange={() => onToggle(item.id)}
+                  />
+                  {item.name}
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
 interface StatsPageProps {
   store: TimerStore
   settings: TimerSettings
@@ -22,8 +93,6 @@ interface StatsPageProps {
 
 export default function StatsPage({ store, settings, onSettings }: StatsPageProps) {
   const decimals = settings.decimals
-  /** Whether the strip's event picker is open. */
-  const [picking, setPicking] = useState(false)
   // Opens on whatever you were just timing, which is nearly always what you
   // came here to look at.
   const [sessionId, setSessionId] = useState(() => activeSession(store).id)
@@ -134,66 +203,22 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
       </section>
 
       {/* ---- the numbers you'd quote someone ---- */}
-      <section className="card">
-        <div className="bench-strip">
-          <h2 className="bench-title">all-time best single</h2>
-          {bench.map((id) => (
-            <div className="bench" key={id}>
-              <span className="bench-label">{eventOf(id).short}</span>
-              <strong className="bench-value">{formatTime(bestFor(id), decimals)}</strong>
-            </div>
-          ))}
-          <button
-            type="button"
-            className="bench-edit"
-            aria-expanded={picking}
-            onClick={() => setPicking(!picking)}
-          >
-            {picking ? 'done' : 'edit'}
-          </button>
-        </div>
-
-        {picking && (
-          <div className="bench-picker">
-            <p>
-              Up to {BENCH_MAX}, so the row stays one line and the figures stay
-              the size you'd quote them at.
-            </p>
-            <div className="bench-options">
-              {EVENTS.map((item) => {
-                const on = bench.includes(item.id)
-                return (
-                  <label key={item.id} className={on ? 'bench-option on' : 'bench-option'}>
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      disabled={!on && bench.length >= BENCH_MAX}
-                      onChange={() => toggleBench(item.id)}
-                    />
-                    {item.name}
-                  </label>
-                )
-              })}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* The same shape and the same events as the card above it, because it is
-          the same question asked of an average instead of a single. No edit
-          button of its own: one list of events drives both cards, and two
-          controls writing it would only ever disagree. */}
-      <section className="card">
-        <div className="bench-strip">
-          <h2 className="bench-title">all-time best ao5</h2>
-          {bench.map((id) => (
-            <div className="bench" key={id}>
-              <span className="bench-label">{eventOf(id).short}</span>
-              <strong className="bench-value">{formatTime(bestAo5For(id), decimals)}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Two cards, one question each, and one list of events behind both — so
+          either card's picker edits what the other one shows. */}
+      <BenchCard
+        title="all-time best single"
+        bench={bench}
+        valueFor={bestFor}
+        decimals={decimals}
+        onToggle={toggleBench}
+      />
+      <BenchCard
+        title="all-time best ao5"
+        bench={bench}
+        valueFor={bestAo5For}
+        decimals={decimals}
+        onToggle={toggleBench}
+      />
 
       {/* ---- when you practised ---- */}
       <section className="card">

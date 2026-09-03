@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { formatTime } from './format'
 import { rollingAverages } from './stats'
 import { effectiveMs, mbldPoints, type Penalty, type Solve } from './types'
@@ -35,17 +35,13 @@ function Head({ label, sortKey, sort, onCycle }: {
 
 interface SolveListProps {
     solves: Solve[]
-    /** Which session these are. Only used to drop a selection when you leave it —
-        the list used to have a mode you pressed 'done' on, which is where that
-        used to happen. */
+    /** Which session these are. Only used to shut any open row when you leave
+        it — a drawer belongs to the list it was opened in. */
     sessionId: string
     decimals: 2 | 3
     onPenalty: (id:number,penalty: Penalty) => void
     onDelete: (id:number) => void
-    /** Removes a whole selection at once. Separate from `onDelete` so the store
-        is rewritten once rather than once per solve. */
-    onDeleteMany: (ids: number[]) => void
-    /** Opens the solves behind one row's ao5 or ao12, or a hand-picked set. */
+    /** Opens the solves behind one row's ao5 or ao12. */
     onOpenAverage?: (view: AverageView) => void
 }
 
@@ -65,22 +61,12 @@ function compare(a: number, b: number, dir: 'asc' | 'desc'): number {
 }
 
 export default function SolveList({
-    solves, sessionId, decimals, onPenalty, onDelete, onDeleteMany, onOpenAverage,
+    solves, sessionId, decimals, onPenalty, onDelete, onOpenAverage,
 }: SolveListProps) {
     const [openId, setOpenId] = useState<number | null>(null)
     const [sort, setSort] = useState<Sort | null>(null)
     /** The row whose delete button has been pressed once already. */
     const [confirming, setConfirming] = useState<number | null>(null)
-    const [picked, setPicked] = useState<Set<number>>(() => new Set())
-    /** Where the last pick landed, so shift can select a run from there. */
-    const lastPos = useRef<number | null>(null)
-    /**
-     * The row a ctrl-drag started on, or null when no drag is running.
-     *
-     * State rather than a ref because the list has to know it is dragging in
-     * order to stop selecting text while the pointer sweeps.
-     */
-    const [dragFrom, setDragFrom] = useState<number | null>(null)
 
     // The ao5 and ao12 as they stood after each solve, the way cstimer lists
     // them: what your average *was* at that point, not what it is now. Memoised
@@ -108,104 +94,18 @@ export default function SolveList({
         })
     }
 
-    function clearPicked() {
-        setPicked(new Set())
-        lastPos.current = null
-    }
-
     /**
-     * A selection belongs to the session it was made in.
+     * A drawer, and a half-pressed delete, belong to the session they were
+     * opened in — neither means anything against a list of different solves.
      *
-     * Switching sessions used to mean pressing 'done', which cleared it. With the
-     * mode gone the ids would otherwise follow you to a list that does not contain
-     * them, leaving a count describing solves you can no longer see.
-     *
-     * Adjusted during the render that brings the new session in rather than in an
-     * effect, so the list never paints once with the old session's selection.
+     * Adjusted during the render that brings the new session in rather than in
+     * an effect, so the list never paints once with the old session's row open.
      */
     const [lastSession, setLastSession] = useState(sessionId)
     if (lastSession !== sessionId) {
         setLastSession(sessionId)
-        setPicked(new Set())
         setOpenId(null)
         setConfirming(null)
-    }
-    // The shift anchor is a ref, and a ref cannot be written during a render.
-    // It only matters on the next shift-click, which cannot happen before this
-    // has run, so clearing it a beat later is soon enough.
-    useEffect(() => { lastPos.current = null }, [sessionId])
-
-    // The drag ends wherever the button comes up, which is very often not over a
-    // row — off the end of the list, or outside the rail entirely. Listening on
-    // the window is what stops a drag from getting stuck on when it does.
-    useEffect(() => {
-        if (dragFrom === null) return
-        const stop = () => setDragFrom(null)
-        window.addEventListener('pointerup', stop)
-        window.addEventListener('pointercancel', stop)
-        return () => {
-            window.removeEventListener('pointerup', stop)
-            window.removeEventListener('pointercancel', stop)
-        }
-    }, [dragFrom])
-
-    /** Adds the run between the row a drag started on and the one under the pointer. */
-    function sweepTo(pos: number) {
-        if (dragFrom === null) return
-        const lo = Math.min(dragFrom, pos)
-        const hi = Math.max(dragFrom, pos)
-
-        setPicked((prev) => {
-            const next = new Set(prev)
-            for (let at = lo; at <= hi; at += 1) next.add(rows[at].solve.id)
-            return next
-        })
-        lastPos.current = pos
-    }
-
-    /**
-     * Picks one row, or — with shift — every row between it and the last one.
-     *
-     * The run is measured in displayed positions rather than solve numbers, so
-     * dragging a selection down a list sorted by time picks what you can see
-     * rather than a stretch of the session you cannot.
-     */
-    function pick(pos: number, shift: boolean) {
-        // Read before the update, not inside it. The updater runs during the
-        // next render, by which point `lastPos.current` would already hold this
-        // click — so the run would always measure from the row just pressed to
-        // itself, and shift would silently behave like an ordinary click.
-        const from = lastPos.current
-        lastPos.current = pos
-
-        setPicked((prev) => {
-            const next = new Set(prev)
-
-            if (shift && from !== null) {
-                const lo = Math.min(from, pos)
-                const hi = Math.max(from, pos)
-                for (let at = lo; at <= hi; at += 1) next.add(rows[at].solve.id)
-                return next
-            }
-
-            const id = rows[pos].solve.id
-            if (next.has(id)) next.delete(id)
-            else next.add(id)
-            return next
-        })
-    }
-
-    // Chronological, because that is the order an average is read in. `solves`
-    // is already in it, so filtering keeps the order without a sort.
-    const pickedSolves = solves.filter((solve) => picked.has(solve.id))
-
-    function deletePicked() {
-        const count = pickedSolves.length
-        if (count === 0) return
-        if (!window.confirm(`Delete ${count} ${count === 1 ? 'solve' : 'solves'}?`)) return
-
-        onDeleteMany(pickedSolves.map((solve) => solve.id))
-        clearPicked()
     }
 
     if (solves.length ===0) {
@@ -213,30 +113,7 @@ export default function SolveList({
     }
 
   return (
-    <>
-      {/* Only there once something is picked. There is no mode to enter any
-          more — ctrl is the mode — so a bar sitting empty above the list would
-          be a permanent reminder of a feature you weren't using. Sticky, because
-          the count and the way out are what you keep coming back to. */}
-      {pickedSolves.length > 0 && (
-        <div className="solve-tools">
-          <span className="solve-count">{pickedSolves.length} picked</span>
-          <button
-            type="button"
-            disabled={!onOpenAverage}
-            onClick={() => onOpenAverage?.({
-              label: `${pickedSolves.length} solves`,
-              solves: pickedSolves,
-            })}
-          >
-            copy / csv
-          </button>
-          <button type="button" className="danger" onClick={deletePicked}>delete</button>
-          <button type="button" onClick={clearPicked}>clear</button>
-        </div>
-      )}
-
-      <ol className={dragFrom === null ? 'solve-list' : 'solve-list sweeping'}>
+      <ol className="solve-list">
       {/* Three of the four headings are controls now, so the row is no longer
           decoration to be hidden from a screen reader. */}
       <li className="solve-head">
@@ -252,39 +129,16 @@ export default function SolveList({
         </span>
       </li>
 
-      {rows.map(({ solve, index }, pos) => {
+      {rows.map(({ solve, index }) => {
         /** The window one of this row's averages was taken over. */
         const windowOf = (size: number) => solves.slice(index + 1 - size, index + 1)
-        const on = picked.has(solve.id)
 
         return (
-        <li key={solve.id} onPointerEnter={() => sweepTo(pos)}>
-          {/* Ctrl is handled here, on the row, rather than on the button inside
-              it — so it picks the row wherever on it you press, including the
-              two average columns, which are their own buttons. Caught on
-              pointerdown and stopped there, so the click that would have
-              followed never reaches whichever control is underneath.
-
-              Without ctrl this does nothing at all, which is what keeps every
-              existing click behaving exactly as it did. */}
-          <div
-            className={`solve-row ${solve.penalty}${on ? ' picked' : ''}`}
-            onPointerDown={(event) => {
-              if (!event.ctrlKey && !event.metaKey) return
-              event.preventDefault()
-              event.stopPropagation()
-              // Shift still means "the run from the last one"; ctrl-dragging
-              // from here means the same thing, drawn with the pointer.
-              pick(pos, event.shiftKey)
-              setDragFrom(pos)
-              setOpenId(null)
-              setConfirming(null)
-            }}
-          >
+        <li key={solve.id}>
+          <div className={`solve-row ${solve.penalty}`}>
             <button
               type="button"
               className="solve-open"
-              aria-pressed={on}
               onClick={() => {
                 setOpenId(openId === solve.id ? null : solve.id)
                 setConfirming(null)
@@ -403,6 +257,5 @@ export default function SolveList({
         )
       })}
       </ol>
-    </>
   )
 }

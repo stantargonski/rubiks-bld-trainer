@@ -119,15 +119,6 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     }))
   }
 
-  /** One rewrite of the store for a whole selection, rather than one each. */
-  function deleteSolves(ids: number[]) {
-    const gone = new Set(ids)
-    updateActive((item) => ({
-      ...item,
-      solves: item.solves.filter((solve) => !gone.has(solve.id)),
-    }))
-  }
-
   function setEvent(id: EventId) {
     // The queue is not touched here: writing the session's event is what starts
     // it over, above, and that is the same path a session switch takes. Which
@@ -205,6 +196,8 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     goNext()
   }
 
+  const typedEntry = settings.entryMode === 'typed'
+
   const { phase, ms, inspectMs } = useTimer(
     (finished, memo, penalty) => {
       // Multi-blind is the one event the clock can't finish on its own: how many
@@ -220,12 +213,14 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
       holdMs: settings.holdMs,
       split: event.split,
       inspection: settings.inspection && event.inspection,
+      // Typing a time means there is no clock on screen; leaving the space bar
+      // armed would start one anyway, invisibly, and hide the interface for it.
+      enabled: !typedEntry,
     },
   )
 
   const timing = phase === 'running' || phase === 'memo'
   const solving = timing && settings.hideUiWhileRunning
-  const typedEntry = settings.entryMode === 'typed'
 
   /**
    * Commits what has been typed, if it amounts to a time.
@@ -361,7 +356,6 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
                 decimals={settings.decimals}
                 onPenalty={setPenalty}
                 onDelete={deleteSolve}
-                onDeleteMany={deleteSolves}
                 onOpenAverage={setDetail}
               />
             </div>
@@ -449,6 +443,11 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
                 <input
                   className="clock clock-entry"
                   value={digitsFace(entry)}
+                  /* Sized to what it holds. Without this the box is twenty
+                     characters wide at clock size — an invisible band across the
+                     window that swallows every click aimed at the rail or the
+                     list behind it. Four is the floor, the width of '0.00'. */
+                  size={Math.max(digitsFace(entry).length, 4)}
                   readOnly
                   autoFocus
                   inputMode="numeric"
