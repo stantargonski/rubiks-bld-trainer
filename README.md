@@ -20,17 +20,18 @@ Add demo videos
 
 *Clips pending — the table above is the shot list.*
 
-## Import csTimer data
-
-In csTimer: the wrench icon → Export → "Export to file". Drag and drop the .txt or open in 
-the settings menu.
-
 ## Running it locally
 
 ```bash
 npm install
 npm run dev
 ```
+
+## Import csTimer data
+
+In csTimer: the wrench icon → Export → "Export to file". Drag and drop the .txt or open in 
+the settings menu.
+
 ## Acknowledgements
 
 - **[csTimer](https://cstimer.net/)** — the import in this app reads csTimer's own
