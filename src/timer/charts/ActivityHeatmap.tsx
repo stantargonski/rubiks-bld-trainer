@@ -15,6 +15,11 @@ import { DAY, startOfDay, windowBounds, type TimeWindow } from './filters'
  * against each other on the same rhythm as the weeks inside them, so the seven
  * weekday rows run unbroken across the whole strip and a month boundary shows
  * as the notch where one month's last week meets the next month's first.
+ *
+ * Except when there is no notch to show. A month that ends on a Sunday hands
+ * the next one a whole clean column to start on, so the two ran together as one
+ * unbroken grid with nothing between them — the boundary the layout relies on
+ * simply wasn't there. Those blocks get the space a notch would have taken.
  */
 
 /** Monday first, to match the row order. Blanks are the rows that go unlabelled. */
@@ -36,6 +41,11 @@ interface MonthBlock {
   label: string;
   /** Weeks, each exactly seven cells, Monday first. */
   columns: Cell[][];
+  /**
+   * Whether this month starts on a Monday — which is to say, whether the month
+   * before it ended on a Sunday and left no notch between the two.
+   */
+  flush: boolean;
 }
 
 interface ActivityHeatmapProps {
@@ -116,6 +126,9 @@ export default function ActivityHeatmap({ solves, range, now }: ActivityHeatmapP
 
       blocks.push({
         key: `${year}-${month}`,
+        // Never on the opening block: there is nothing to its left to be flush
+        // against, and a strip that started with a gap would just look misaligned.
+        flush: weekdayOf(first) === 0 && blocks.length > 0,
         // The year rides along on January and on the opening block, which is
         // the only place a bare month name would be ambiguous.
         label: month === 0 || blocks.length === 0
@@ -166,7 +179,10 @@ export default function ActivityHeatmap({ solves, range, now }: ActivityHeatmapP
         <div className="activity-scroll" ref={scroller}>
           <div className="activity-grid">
             {months.map((month) => (
-              <div className="activity-month-block" key={month.key}>
+              <div
+                className={month.flush ? 'activity-month-block flush' : 'activity-month-block'}
+                key={month.key}
+              >
                 <span className="activity-month">{month.label}</span>
 
                 {month.columns.map((week, at) => (

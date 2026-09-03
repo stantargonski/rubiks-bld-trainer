@@ -1,17 +1,11 @@
 /**
- * Which boxes the stats page can show, and in what order they ship.
+ * Which boxes the stats page shows, and in what order.
  *
- * A plain module rather than part of the component: the settings reader needs
- * this list to validate a saved layout, and a component file that also exports
- * data is a component file fast refresh stops being able to reload.
- *
- * Storing ids and nothing else is deliberate. A saved layout that described the
- * boxes themselves could disagree with the build about what a box is; a list of
- * ids can only ever be right, out of date, or unknown — and unknown is dropped.
+ * A plain module rather than part of the component: a component file that also
+ * exports data is a component file fast refresh stops being able to reload.
  */
 export interface TileSpec {
   id: string;
-  /** How settings names it, where there is no session in front of you. */
   name: string;
   /** Only meaningful where memo and execution are timed apart. */
   splitOnly?: boolean;
@@ -29,10 +23,3 @@ export const TILES: TileSpec[] = [
   { id: 'memo', name: 'memo', splitOnly: true },
   { id: 'exec', name: 'exec', splitOnly: true },
 ];
-
-/** Every box, in the order they ship in. */
-export const DEFAULT_STAT_TILES: string[] = TILES.map((tile) => tile.id);
-
-export function tileSpec(id: string): TileSpec | undefined {
-  return TILES.find((tile) => tile.id === id);
-}

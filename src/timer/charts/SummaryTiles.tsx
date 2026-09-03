@@ -6,7 +6,7 @@ import {
 import { effectiveMs, type Solve } from '../types'
 import type { AverageView } from '../averageText'
 import type { WcaEvent } from '../events'
-import { tileSpec } from './tiles'
+import { TILES } from './tiles'
 
 function Tile({ label, value, note, onOpen }: {
   label: string
@@ -31,16 +31,12 @@ interface SummaryTilesProps {
   solves: Solve[]
   decimals: 2 | 3
   event: WcaEvent
-  /** The boxes to draw, in order. */
-  order: string[]
-  /** Which of them are switched off. */
-  hidden: string[]
   /** Opens the solves behind one of the boxes. */
   onOpenAverage?: (view: AverageView) => void
 }
 
 export default function SummaryTiles({
-  solves, decimals, event, order, hidden, onOpenAverage,
+  solves, decimals, event, onOpenAverage,
 }: SummaryTilesProps) {
   const time = (ms: number) => formatTime(ms, decimals)
 
@@ -52,8 +48,6 @@ export default function SummaryTiles({
     bestHundred: bestAverageWindow(solves, 100),
     singleAt: bestSingleIndex(solves),
   }), [solves])
-
-  const off = new Set(hidden)
 
   /** A box that opens the solves behind it, when there are any to open. */
   function opener(label: string, window: Solve[] | null, value: number) {
@@ -115,10 +109,9 @@ export default function SummaryTiles({
 
   return (
     <div className="tiles">
-      {order
-        .filter((id) => !off.has(id))
-        .filter((id) => event.split || !tileSpec(id)?.splitOnly)
-        .map(render)}
+      {TILES
+        .filter((tile) => event.split || !tile.splitOnly)
+        .map((tile) => render(tile.id))}
     </div>
   )
 }
