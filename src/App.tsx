@@ -32,6 +32,39 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: 'settings', label: 'Settings' },
 ];
 
+/**
+ * The wordmark, and the way back to the timer — the way a logo is on every other
+ * site.
+ *
+ * Its own component because it is rendered twice, in the bar and floating over
+ * the content once the bar is stowed, and the two must not be able to drift.
+ */
+function Brand({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className="brand" onClick={onClick} title="back to the timer">
+      tstimer
+    </button>
+  )
+}
+
+/** Puts the bar away, and — floating in its place — brings it back. */
+function StowToggle({ appearance, onAppearance }: {
+  appearance: Appearance
+  onAppearance: (next: Appearance) => void
+}) {
+  return (
+    <button
+      type="button"
+      className="topbar-stow"
+      aria-expanded={!appearance.topBarStowed}
+      title={appearance.topBarStowed ? 'show the menu' : 'hide the menu'}
+      onClick={() => onAppearance({ ...appearance, topBarStowed: !appearance.topBarStowed })}
+    >
+      {appearance.topBarStowed ? '⌄' : '⌃'}
+    </button>
+  )
+}
+
 export default function App() {
   const [section, setSection] = useState<Section>('timer');
 
@@ -150,47 +183,38 @@ export default function App() {
     <div className="app">
       <div className="app-bg" />
 
-      <header className={appearance.topBarStowed ? 'topbar stowed' : 'topbar'}>
-       {/* The wordmark is the way back to the timer, the way a logo is on
-           every other site. It stays put when the bar is stowed. */}
-       <button
-         type="button"
-         className="brand"
-         onClick={() => setSection('timer')}
-         title="back to the timer"
-       >
-         tstimer
-       </button>
-       {!appearance.topBarStowed && (
-         <nav className="nav">
-          {SECTIONS.map((item) => (
-            <button
-              key={item.id}
-              aria-current={section === item.id}
-              onClick={() => setSection(item.id)}
-            >
-              {item.label}
-              </button>
-          ))}
-         </nav>
-       )}
+      {/* Stowed, the bar is gone rather than shortened — the point of stowing it
+          is the screen it gives back, and a strip left behind is a strip you
+          paid for twice. What replaces it is the same two controls floating over
+          the content: the wordmark, so there is still a way back to the timer,
+          and the chevron that brings the bar back.
 
-       {/* Stows the bar down to the wordmark, which stays both because it is
-           the way back to the timer and because a bar with nothing in it reads
-           as a rendering fault rather than as a choice. */}
-       <button
-         type="button"
-         className="topbar-stow"
-         aria-expanded={!appearance.topBarStowed}
-         title={appearance.topBarStowed ? 'show the menu' : 'hide the menu'}
-         onClick={() => updateAppearance({
-           ...appearance,
-           topBarStowed: !appearance.topBarStowed,
-         })}
-       >
-         {appearance.topBarStowed ? '⌄' : '⌃'}
-       </button>
-      </header>
+          Two wordmarks, one mounted at a time. They carry the same class and so
+          the same size, which is the whole reason it is written twice rather
+          than moved between parents — a wordmark that shrinks when the bar goes
+          reads as the app having gone away. */}
+      {appearance.topBarStowed ? (
+        <div className="topbar-float">
+          <Brand onClick={() => setSection('timer')} />
+          <StowToggle appearance={appearance} onAppearance={updateAppearance} />
+        </div>
+      ) : (
+        <header className="topbar">
+          <Brand onClick={() => setSection('timer')} />
+          <nav className="nav">
+            {SECTIONS.map((item) => (
+              <button
+                key={item.id}
+                aria-current={section === item.id}
+                onClick={() => setSection(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          <StowToggle appearance={appearance} onAppearance={updateAppearance} />
+        </header>
+      )}
 
       {saveError && <p className="save-error" role="alert">{saveError}</p>}
 

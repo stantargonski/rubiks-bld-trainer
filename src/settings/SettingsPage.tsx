@@ -5,7 +5,7 @@ import StatTilesEditor from './StatTilesEditor'
 import TimerPreview from './TimerPreview'
 import { FONTS, THEMES, type Appearance } from '../theme/theme'
 import { clearBackground, downscale, putBackground } from '../theme/imageStore'
-import type { TimerSettings } from '../timer/settings'
+import { SCALE_MAX, SCALE_MIN, type TimerSettings } from '../timer/settings'
 import type { TimerStore } from '../timer/types'
 
 /** The jump targets down the left, in the order the page runs. */
@@ -368,6 +368,45 @@ export default function SettingsPage({
                 <Toggle value={timer.showCubeNet} onChange={(v) => setTimer('showCubeNet', v)} />
               </Row>
               <Row
+                label="hide the preview for blindfolded events"
+                description="A picture of the scramble is the one thing you are not allowed to look at. Off if you want it back for checking a scramble."
+              >
+                <Toggle
+                  value={timer.hideBldPreview}
+                  onChange={(v) => setTimer('hideBldPreview', v)}
+                />
+              </Row>
+
+              {/* Percentages of the stock size rather than absolute sizes: both
+                  still scale with the window and with the app-wide text size,
+                  and this only says by how much more or less than usual. */}
+              <Row
+                label="clock size"
+                description="How big the running time is, as a percentage of its usual size."
+              >
+                <Stepper
+                  value={timer.clockScale}
+                  min={SCALE_MIN}
+                  max={SCALE_MAX}
+                  step={5}
+                  format={plain}
+                  onChange={(value) => setTimer('clockScale', value)}
+                />
+              </Row>
+              <Row
+                label="scramble size"
+                description="The same, for the scramble in the banner."
+              >
+                <Stepper
+                  value={timer.scrambleScale}
+                  min={SCALE_MIN}
+                  max={SCALE_MAX}
+                  step={5}
+                  format={plain}
+                  onChange={(value) => setTimer('scrambleScale', value)}
+                />
+              </Row>
+              <Row
                 label="hide everything while solving"
                 description="Fades the rail and the scramble the moment the clock starts."
               >
@@ -471,16 +510,6 @@ export default function SettingsPage({
           <h2 className="panel-title">stats</h2>
 
           <Row
-            label="the mean, on the histogram"
-            description="A dashed line at the mean of the times drawn. Also switchable beside the chart itself."
-          >
-            <Toggle
-              value={timer.showHistogramMean}
-              onChange={(v) => setTimer('showHistogramMean', v)}
-            />
-          </Row>
-
-          <Row
             label="the boxes, and their order"
             description="What the session summary shows, top to bottom. They flow left to right across the page in this order."
           >
@@ -497,9 +526,10 @@ export default function SettingsPage({
 
         <section className="settings-group" id="settings-data">
           <h2 className="panel-title">data</h2>
+          {/* Importing from csTimer is one of the things you do with your data,
+              not a subject of its own — under the same heading, so it reads as
+              part of the same job rather than as another section to find. */}
           <DataSection />
-
-          <h2 className="panel-title">csTimer</h2>
           <CsTimerImport store={timerStore} onImport={onTimerStore} onOpenTimer={onOpenTimer} />
 
           <h2 className="panel-title">starting over</h2>

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { formatTime } from '../timer/format'
 import type { TimerSettings } from '../timer/settings'
 
@@ -16,7 +17,20 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
 
   return (
     <div className="timer-preview" aria-hidden="true">
-      <div className="timer-preview-scale">
+      {/* The two size multipliers are set here rather than read off the document,
+          so stepping the control moves the mock as you press it instead of after
+          it is saved. The wrapper is already scaled by a transform, so the mock's
+          clock is scaled twice — which is what makes it a preview of the
+          proportion rather than of the size. */}
+      <div
+        className="timer-preview-scale"
+        style={{
+          '--clock-scale': settings.clockScale / 100,
+          '--scramble-scale': settings.scrambleScale / 100,
+        } as CSSProperties}
+      >
+        {/* `railStowed` is deliberately not honoured: this shows how the timer is
+            styled, and a preview of an absent rail shows nothing at all. */}
         <div className="timer-frame">
           {(settings.showSolveList || settings.showStats) && (
             <aside className={settings.flatSidebar ? 'timer-rail flat' : 'timer-rail'}>

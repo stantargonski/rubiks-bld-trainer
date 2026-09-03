@@ -129,6 +129,11 @@ export default function CsTimerImport({ store, onImport, onOpenTimer }: CsTimerI
         if (dropped) void read(dropped)
       }}
     >
+      {/* An h3, matching the sub-headings inside the data section it now sits
+          in. It used to carry an h2 of its own, which read as a section of the
+          page rather than as one of the things you can do with your data. */}
+      <h3>from csTimer</h3>
+
       <div className="actions">
         <button type="button" onClick={() => picker.current?.click()}>
           {file ? 'choose another file' : 'import from csTimer'}

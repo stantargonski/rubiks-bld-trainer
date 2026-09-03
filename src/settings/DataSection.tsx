@@ -209,7 +209,7 @@ export default function DataSection() {
           </p>
           <div className="actions">
             <button type="button" onClick={() => void rollBack()}>
-              restore previous verison settings
+              restore previous version settings
             </button>
           </div>
         </div>

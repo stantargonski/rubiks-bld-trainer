@@ -29,8 +29,6 @@ function Tile({ label, value, note, onOpen }: {
 
 interface SummaryTilesProps {
   solves: Solve[]
-  /** Every solve of this event, across every session, for the all-time boxes. */
-  allTime: Solve[]
   decimals: 2 | 3
   event: WcaEvent
   /** The boxes to draw, in order. */
@@ -42,7 +40,7 @@ interface SummaryTilesProps {
 }
 
 export default function SummaryTiles({
-  solves, allTime, decimals, event, order, hidden, onOpenAverage,
+  solves, decimals, event, order, hidden, onOpenAverage,
 }: SummaryTilesProps) {
   const time = (ms: number) => formatTime(ms, decimals)
 
@@ -53,8 +51,7 @@ export default function SummaryTiles({
     bestTwelve: bestAverageWindow(solves, 12),
     bestHundred: bestAverageWindow(solves, 100),
     singleAt: bestSingleIndex(solves),
-    allTimeFive: bestAverageWindow(allTime, 5),
-  }), [solves, allTime])
+  }), [solves])
 
   const off = new Set(hidden)
 
@@ -79,22 +76,6 @@ export default function SummaryTiles({
             label="best single"
             value={time(value)}
             onOpen={opener('best single', at >= 0 ? solves.slice(at, at + 1) : null, value)}
-          />
-        )
-      }
-      case 'allTimeBestAo5': {
-        const { value, start } = figures.allTimeFive
-        return (
-          <Tile
-            key={id}
-            label="all-time best ao5"
-            value={time(value)}
-            note="every session, this event"
-            onOpen={opener(
-              'all-time best ao5',
-              start >= 0 ? allTime.slice(start, start + 5) : null,
-              value,
-            )}
           />
         )
       }

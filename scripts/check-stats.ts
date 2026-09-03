@@ -155,7 +155,11 @@ eq(bestSingleIndex(solvesOf(['dnf', 'dnf'])), -1, 'nothing to point at when ever
 // ---- the rest of the panel, guarded against collateral damage ----
 
 eq(mean(solvesOf([10_000, 11_000, 12_000])), 11_000, 'the mean trims nothing');
-eq(mean(solvesOf([10_000, 'dnf'])), Infinity, 'one DNF is the whole mean');
+// The session mean skips DNFs rather than becoming one. simpleMean, which the
+// comp round scorer uses, still does the WCA thing — checked in check-timer.
+eq(mean(solvesOf([10_000, 'dnf'])), 10_000, 'a DNF is left out of the mean, not the whole of it');
+eq(mean(solvesOf([10_000, 'dnf', 12_000])), 11_000, 'and the rest still average normally');
+eq(mean(solvesOf(['dnf', 'dnf'])), NaN, 'no mean at all when nothing finished');
 eq(best(solvesOf([])), NaN, 'no best without solves');
 eq(stdev(solvesOf([11_000, 11_000, 11_000])), 0, 'no deviation in a flat run');
 

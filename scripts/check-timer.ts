@@ -125,24 +125,27 @@ check(
 const block = averageText('ao5', sample, 2);
 const lines = block.split('\n');
 
-check(lines[0] === 'ao5: 13.53', `the block leads with the average, got "${lines[0]}"`);
-check(lines[1] === '', 'a blank line separates the average from its solves');
-// Header, blank, one line per solve, blank, provenance footer.
-check(lines.length === sample.length + 4, 'one line per solve, in the order they happened');
-check(lines[lines.length - 2] === '', 'a blank line separates the solves from the footer');
 check(
-  /^From tstimer, taken on \d{4}-\d{2}-\d{2}$/.test(lines[lines.length - 1]),
-  `the block says where it came from and when, got "${lines[lines.length - 1]}"`,
+  /^From tstimer, taken on \d{4}-\d{2}-\d{2}$/.test(lines[0]),
+  `the block opens by saying where it came from and when, got "${lines[0]}"`,
 );
+check(lines[1] === 'ao5: 13.53', `the average comes next, got "${lines[1]}"`);
+check(lines[2] === '', 'a blank line separates the average from its solves');
+// Provenance, header, blank, one line per solve.
+check(lines.length === sample.length + 3, 'one line per solve, in the order they happened');
 check(
   averageText('ao5', sample, 2, undefined, new Date(2026, 0, 15))
-    .endsWith('From tstimer, taken on 2026-01-15'),
-  'the footer carries the date the block was taken',
+    .startsWith('From tstimer, taken on 2026-01-15'),
+  'the provenance line carries the date the block was taken',
+);
+check(
+  block.split('From tstimer').length === 2,
+  'and it is said once, not once at each end',
 );
 // The reason the headline can be pinned at all: a one-solve window trims away
 // to nothing, so the average of it is not a number worth printing.
 check(
-  averageText('best single', [sample[0]], 2, 12340).split('\n')[0] === 'best single: 12.34',
+  averageText('best single', [sample[0]], 2, 12340).split('\n')[1] === 'best single: 12.34',
   'an explicit headline overrides the trimmed average',
 );
 // An ao5 trims one from each end: the 11.02 and the 15.01, and nothing else.
@@ -150,9 +153,10 @@ check(
   lines.filter((line) => line.includes('(')).length === 2,
   'exactly the trimmed pair is bracketed',
 );
-check(lines[5].includes('(11.02)'), 'the best of the five is bracketed as trimmed');
-check(lines[3].includes('(15.01)'), 'the worst of the five is bracketed as trimmed');
-check(lines[2].includes("R U R' scramble 1"), 'each line carries its own scramble');
+// Provenance, headline, blank — so the first solve is line 3.
+check(lines[6].includes('(11.02)'), 'the best of the five is bracketed as trimmed');
+check(lines[4].includes('(15.01)'), 'the worst of the five is bracketed as trimmed');
+check(lines[3].includes("R U R' scramble 1"), 'each line carries its own scramble');
 
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} failure(s):`);

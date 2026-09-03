@@ -6,7 +6,7 @@ import { readTimerSettings, TIMER_SETTINGS_KEY } from '../timer/settings';
 import { migrate as migrateTimer, TIMER_KEY, TIMER_STORE_VERSIONS } from '../timer/storage';
 import { effectiveMs, execMs, type Session, type Solve } from '../timer/types';
 import { eventOf } from '../timer/events';
-import { formatTime, type Decimals } from '../timer/format';
+import { attribution, dateStamp, formatTime, type Decimals } from '../timer/format';
 import { APPEARANCE_KEY, readAppearance } from '../theme/theme';
 import {
   clearBackground, fromDataUrl, getBackground, putBackground, toDataUrl,
@@ -287,20 +287,29 @@ export function sessionCsv(session: Session): string {
 export function solveLine(solve: Solve, decimals: Decimals): string {
   const when = new Date(solve.id);
   const stamped = `${when.toLocaleDateString()} ${when.toLocaleTimeString()}`;
+  // Two lines, with the provenance on the first — the same shape and the same
+  // wording as an average block, so a solve and an average pasted into the same
+  // conversation read as having come from the same place.
   return [
-    formatTime(effectiveMs(solve), decimals),
-    stamped,
-    eventOf(solve.event).name,
-    solve.scramble,
-    // Same reason the average block carries one: a line pasted into a chat
-    // loses every bit of context except what's written in it.
-    `— from tstimer, taken on ${stamp()}`,
-  ].join('  ');
+    attribution(),
+    [
+      formatTime(effectiveMs(solve), decimals),
+      stamped,
+      eventOf(solve.event).name,
+      solve.scramble,
+    ].join('  '),
+  ].join('\n');
 }
 
-/** A filename-safe stamp: 2026-09-01. */
+/**
+ * A filename-safe stamp: 2026-09-01.
+ *
+ * The same local date the provenance line inside the file carries. It used to be
+ * UTC, which meant an export made late in the evening could be filed under
+ * tomorrow while the block inside it said today.
+ */
 export function stamp(): string {
-  return new Date().toISOString().slice(0, 10);
+  return dateStamp();
 }
 
 /** Filenames can't hold most of what a session name can. */
