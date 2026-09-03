@@ -1,29 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import CsTimerImport from './CsTimerImport'
 import { downloadText, exportAll, importAll, stamp, type ImportReport } from '../data/backup'
 import { describeBytes, MAX_FILE_BYTES, tooBig } from '../data/limits'
 import { eraseEverything, getSnapshot, restoreSnapshot, type Snapshot } from '../data/snapshot'
-import type { TimerStore } from '../timer/types'
-
-interface DataSectionProps {
-  timerStore: TimerStore
-  onTimerStore: (next: TimerStore) => void
-  /** Takes you to the timer, where imported solves now are. */
-  onOpenTimer: () => void
-}
 
 /**
  * Backup and restore for everything the app has stored.
  *
  * Lives on its own rather than inside whichever screen currently hosts the
  * settings, because what it does spans all of them.
- *
- * Bringing a csTimer history in is another way of getting data in, so it sits
- * here directly under export/import rather than in a section of its own — the
- * component itself stays in `./CsTimerImport`, which is a job big enough to
- * read on its own.
  */
-export default function DataSection({ timerStore, onTimerStore, onOpenTimer }: DataSectionProps) {
+export default function DataSection() {
   const picker = useRef<HTMLInputElement>(null)
   const [report, setReport] = useState<ImportReport | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -148,9 +134,6 @@ export default function DataSection({ timerStore, onTimerStore, onOpenTimer }: D
         One file holds pairs, solves, algs and settings.
       </p>
 
-      <div className="data-cstimer">
-        <CsTimerImport store={timerStore} onImport={onTimerStore} onOpenTimer={onOpenTimer} />
-      </div>
 
       {snapshot && (
         <div className="data-snapshot">
