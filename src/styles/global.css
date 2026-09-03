@@ -1309,7 +1309,7 @@ textarea,
   font-family: var(--font-timer);
   font-variant-numeric: tabular-nums;
   font-size: calc(clamp(64px, 12vw, 140px) * var(--font-scale) * var(--clock-scale, 1));
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--text);
