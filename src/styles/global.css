@@ -1184,6 +1184,7 @@ textarea,
   max-height: 35vh;
   overflow-y: auto;
 }
+
 /* A button, so the whole scramble is one click target and keyboard-reachable,
    but styled back down to plain text. */
 .scramble-text {
