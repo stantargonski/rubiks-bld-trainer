@@ -17,6 +17,64 @@ export interface ThemeColors {
   accent: string;
   accentInk: string;
   dead: string;
+
+  /**
+   * The colours that mean something rather than merely place something, and
+   * the six faces of a cube.
+   *
+   * Optional, and defaulted from `THEME_EXTRAS`, so adding a stock theme is
+   * still the nine colours above rather than eighteen. A theme states one of
+   * these only when the stock value is wrong for it — which for `go` and
+   * `holding` is exactly what the two light themes were getting wrong: they
+   * were built on the assumption of a dark background, and every theme was
+   * quietly using them.
+   */
+  go?: string;
+  holding?: string;
+  flag?: string;
+  cubeU?: string;
+  cubeD?: string;
+  cubeF?: string;
+  cubeB?: string;
+  cubeR?: string;
+  cubeL?: string;
+}
+
+/** Every colour stated, with nothing left to a fallback. */
+export type Palette = Required<ThemeColors>;
+
+/**
+ * What a theme gets for the colours it does not state.
+ *
+ * These are the values the stylesheet declares on `:root`, kept here as well
+ * because that declaration is only the fallback for the moment before this file
+ * runs. The two must agree; the stylesheet says so beside them.
+ */
+export const THEME_EXTRAS: Omit<Palette, keyof ThemeColors> & Pick<Palette,
+  'go' | 'holding' | 'flag' | 'cubeU' | 'cubeD' | 'cubeF' | 'cubeB' | 'cubeR' | 'cubeL'
+> = {
+  go: '#3fbf6f',
+  holding: '#ff2934',
+  flag: '#ffc233',
+  cubeU: '#eef2f8',
+  cubeD: '#ffd23f',
+  cubeF: '#35b866',
+  cubeB: '#2f7bd6',
+  cubeR: '#e04b41',
+  cubeL: '#f08a24',
+};
+
+/** A theme's colours with every optional one filled in. */
+export function paletteOf(colors: ThemeColors): Palette {
+  const full = { ...THEME_EXTRAS, ...colors } as Palette;
+  // A key present but undefined would have overwritten its default above; a
+  // hand-edited backup is exactly where that arrives from.
+  for (const [key, value] of Object.entries(THEME_EXTRAS)) {
+    if (full[key as keyof Palette] === undefined) {
+      (full as Record<string, string>)[key] = value;
+    }
+  }
+  return full;
 }
 
 export interface Theme {
@@ -116,6 +174,10 @@ export const THEMES: Theme[] = [
       bg: '#e1e1e3', panel: '#f3f3f4', panel2: '#e7e7e9', line: '#c9c9cd',
       text: '#323437', textDim: '#6f747c', accent: '#c39a08', accentInk: '#ffffff',
       dead: '#d7d7da',
+      // The stock green and red are pitched to glow off a dark background; on
+      // paper they read as highlighter. Darkened until they carry their meaning
+      // against white instead.
+      go: '#1f8a4c', holding: '#c62828',
     },
   },
   {
@@ -126,6 +188,7 @@ export const THEMES: Theme[] = [
       bg: '#f2ecee', panel: '#fffafb', panel2: '#f8eef1', line: '#e0cdd4',
       text: '#3a2f34', textDim: '#7d6a72', accent: '#d6608f', accentInk: '#ffffff',
       dead: '#e9e0e3',
+      go: '#2b7d55', holding: '#c22a41',
     },
   },
 ];
@@ -160,6 +223,14 @@ export interface Appearance {
   panelBlur: number;
   bgBlur: number;
   bgDim: number;
+  /**
+   * A palette of your own, or null if you have never opened the editor.
+   *
+   * Kept even while a stock theme is selected, so switching to Midnight to
+   * check something and back again does not cost you the palette you built.
+   * `themeId` is what says whether it is in use.
+   */
+  customTheme: CustomTheme | null;
   /** Whether a picture is waiting in IndexedDB. The picture itself never lives here. */
   hasBackground: boolean;
   /** Top bar collapsed to just the wordmark. Lives here rather than in the timer
@@ -167,9 +238,23 @@ export interface Appearance {
   topBarStowed: boolean;
 }
 
+/**
+ * A palette someone built, which is every colour stated rather than most of
+ * them defaulted: an editor that silently left nine colours out is an editor
+ * that cannot be used to change them.
+ */
+export interface CustomTheme extends Palette {
+  /** Chosen, not inferred, once you disagree with the guess. */
+  dark: boolean;
+}
+
+/** The id `themeId` carries while a custom palette is the one in use. */
+export const CUSTOM_THEME_ID = 'custom';
+
 export const DEFAULT_APPEARANCE: Appearance = {
   schemaVersion: 1,
   themeId: 'midnight',
+  customTheme: null,
   uiFont: 'manrope',
   timerFont: 'manrope',
   fontScale: 1,
@@ -188,6 +273,102 @@ export const APPEARANCE_VERSIONS = [1];
 
 export function themeOf(id: string): Theme {
   return THEMES.find((theme) => theme.id === id) ?? THEMES[0];
+}
+
+/**
+ * The theme an appearance actually means, stock or otherwise.
+ *
+ * `themeOf` alone cannot answer this: a custom palette is not in `THEMES` and
+ * never will be, because it belongs to one person rather than to the app.
+ */
+export function resolveTheme(appearance: Appearance): Theme {
+  if (appearance.themeId === CUSTOM_THEME_ID && appearance.customTheme) {
+    const { dark, ...colors } = appearance.customTheme;
+    return { id: CUSTOM_THEME_ID, name: 'Custom', dark, colors };
+  }
+  return themeOf(appearance.themeId);
+}
+
+/**
+ * A stock theme as a palette you can edit — every colour stated, plus the
+ * light/dark flag it shipped with.
+ *
+ * Lives here rather than in the editor so that file exports nothing but a
+ * component, which is what keeps fast refresh working during development.
+ */
+export function seedCustomTheme(from: string): CustomTheme {
+  const theme = themeOf(from);
+  return { ...paletteOf(theme.colors), dark: theme.dark };
+}
+
+/**
+ * Whether a background wants light text over it.
+ *
+ * Rec. 709 luma on the raw channels rather than proper relative luminance: the
+ * question is only which side of the middle a colour sits on, and the two agree
+ * about that everywhere it matters. Used to guess the `dark` flag for a palette
+ * as it is built, which the editor then lets you overrule.
+ */
+export function isDark(hex: string): boolean {
+  const rgb = parseHex(hex);
+  if (!rgb) return true;
+
+  const [red, green, blue] = rgb;
+  return (0.2126 * red + 0.7152 * green + 0.0722 * blue) < 140;
+}
+
+/** `#rgb` or `#rrggbb` to channels, or null if it is neither. */
+function parseHex(value: string): [number, number, number] | null {
+  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(value);
+  if (short) {
+    const [, red, green, blue] = short;
+    return [red, green, blue].map((part) => parseInt(part + part, 16)) as [number, number, number];
+  }
+
+  const long = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(value);
+  if (!long) return null;
+
+  const [, red, green, blue] = long;
+  return [red, green, blue].map((part) => parseInt(part, 16)) as [number, number, number];
+}
+
+/**
+ * A colour out of an untrusted blob.
+ *
+ * Hex only, deliberately. These strings are written straight onto the root
+ * element and the stylesheet then feeds them to twenty-odd `color-mix()` calls
+ * that assume plain sRGB — so anything that is not unambiguously a colour, and
+ * anything carrying an alpha channel, is refused rather than passed along to
+ * fail somewhere further down where it would look like a rendering bug.
+ */
+function colorOf(value: unknown, fallback: string): string {
+  return typeof value === 'string' && parseHex(value) !== null ? value : fallback;
+}
+
+/** A whole palette out of an untrusted blob, one colour at a time. */
+function paletteFrom(value: unknown, fallback: Palette): Palette {
+  const parsed = (value ?? {}) as Partial<Palette>;
+  const out = {} as Palette;
+
+  for (const key of Object.keys(fallback) as (keyof Palette)[]) {
+    out[key] = colorOf(parsed[key], fallback[key]);
+  }
+  return out;
+}
+
+/** A custom palette out of an untrusted blob, or null if there isn't one. */
+function customThemeOf(value: unknown): CustomTheme | null {
+  if (!value || typeof value !== 'object') return null;
+
+  const colors = paletteFrom(value, paletteOf(THEMES[0].colors));
+  const dark = (value as Partial<CustomTheme>).dark;
+
+  return {
+    ...colors,
+    // An unreadable flag is guessed rather than defaulted: a palette built
+    // around a white background with `dark: true` fights the scrollbars.
+    dark: typeof dark === 'boolean' ? dark : isDark(colors.bg),
+  };
 }
 
 export function fontOf(id: string): FontChoice {
@@ -210,12 +391,18 @@ export function readAppearance(input: unknown): Appearance {
     return DEFAULT_APPEARANCE;
   }
 
-  const themeIds = THEMES.map((theme) => theme.id);
   const fontIds = FONTS.map((font) => font.id);
+
+  // Read first, because whether `custom` is a themeId anyone may hold depends
+  // on whether there is a palette behind it.
+  const customTheme = customThemeOf(parsed.customTheme);
+  const themeIds = THEMES.map((theme) => theme.id);
+  if (customTheme) themeIds.push(CUSTOM_THEME_ID);
 
   return {
     schemaVersion: 1,
     themeId: pick(parsed.themeId, themeIds, DEFAULT_APPEARANCE.themeId),
+    customTheme,
     uiFont: pick(parsed.uiFont, fontIds, DEFAULT_APPEARANCE.uiFont),
     timerFont: pick(parsed.timerFont, fontIds, DEFAULT_APPEARANCE.timerFont),
     fontScale: clamp(parsed.fontScale, 0.85, 1.4, DEFAULT_APPEARANCE.fontScale),
@@ -256,19 +443,32 @@ export function saveAppearance(appearance: Appearance): void {
  * flash of the stock theme on load.
  */
 export function applyAppearance(appearance: Appearance): void {
-  const theme = themeOf(appearance.themeId);
+  const theme = resolveTheme(appearance);
+  const colors = paletteOf(theme.colors);
   const root = document.documentElement;
 
   const values: Record<string, string> = {
-    '--bg': theme.colors.bg,
-    '--panel': theme.colors.panel,
-    '--panel-2': theme.colors.panel2,
-    '--line': theme.colors.line,
-    '--text': theme.colors.text,
-    '--text-dim': theme.colors.textDim,
-    '--accent': theme.colors.accent,
-    '--accent-ink': theme.colors.accentInk,
-    '--dead': theme.colors.dead,
+    '--bg': colors.bg,
+    '--panel': colors.panel,
+    '--panel-2': colors.panel2,
+    '--line': colors.line,
+    '--text': colors.text,
+    '--text-dim': colors.textDim,
+    '--accent': colors.accent,
+    '--accent-ink': colors.accentInk,
+    '--dead': colors.dead,
+    // Written from here for the first time. These used to be declared once in
+    // the stylesheet and left there, so the two light themes ran the same
+    // dark-background green and red as every other theme.
+    '--go': colors.go,
+    '--holding': colors.holding,
+    '--flag': colors.flag,
+    '--cube-u': colors.cubeU,
+    '--cube-d': colors.cubeD,
+    '--cube-f': colors.cubeF,
+    '--cube-b': colors.cubeB,
+    '--cube-r': colors.cubeR,
+    '--cube-l': colors.cubeL,
     '--font-ui': fontOf(appearance.uiFont).stack,
     '--font-timer': fontOf(appearance.timerFont).stack,
     '--font-scale': String(appearance.fontScale),

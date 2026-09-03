@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { dayCounts, dayKey } from '../stats'
 import type { Solve } from '../types'
-import { DAY, type Range } from './ranges'
+import { DAY, startOfDay, windowBounds, type TimeWindow } from './filters'
 
 /**
  * When you actually practised, a square per day.
@@ -40,16 +40,9 @@ interface MonthBlock {
 
 interface ActivityHeatmapProps {
   solves: Solve[]
-  range: Range
+  range: TimeWindow
   /** Owned by the page, so nothing here has to read the clock during a render. */
   now: number
-}
-
-/** Midnight local time on the day `when` falls in. */
-function startOfDay(when: number): Date {
-  const date = new Date(when);
-  date.setHours(0, 0, 0, 0);
-  return date;
 }
 
 /** 0 = Monday. JS starts its week on Sunday; the grid does not. */
@@ -63,16 +56,18 @@ export default function ActivityHeatmap({ solves, range, now }: ActivityHeatmapP
   const { months, total, busiest } = useMemo(() => {
     const counts = dayCounts(solves);
 
-    const today = startOfDay(now);
+    const bounds = windowBounds(range, solves, now);
+    // Never past today, however far forward the window was typed.
+    const today = startOfDay(Math.min(bounds.to, now));
     // All-time starts at the first solve, but never draws less than a month —
     // a single column of squares reads as a bug rather than as a new account.
     const earliest = solves.length > 0
       ? startOfDay(Math.min(...solves.map((solve) => solve.id)))
       : today;
 
-    const from = range === 0
+    const from = bounds.from === null
       ? startOfDay(Math.min(earliest.getTime(), today.getTime() - 27 * DAY))
-      : startOfDay(today.getTime() - (range - 1) * DAY);
+      : startOfDay(bounds.from);
 
     const blocks: MonthBlock[] = [];
     let running = 0;

@@ -85,6 +85,15 @@ export interface TimerSettings {
    */
   benchEvents: EventId[];
   /**
+   * The same, for the strip quoting an all-time best ao5.
+   *
+   * A list of its own rather than a second reading of `benchEvents`: the events
+   * you would quote a single for are not always the ones you have enough solves
+   * in to have an average worth quoting, and the two strips sitting one above
+   * the other made that impossible to say.
+   */
+  benchAo5Events: EventId[];
+  /**
    * The stats-page boxes, in the order they are drawn.
    *
    * Holds every box, shown or not — which is why the hidden ones need a list of
@@ -136,6 +145,7 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   previewBottom: 16,
   mbldCount: 3,
   benchEvents: DEFAULT_BENCH_EVENTS,
+  benchAo5Events: DEFAULT_BENCH_EVENTS,
   statTiles: DEFAULT_STAT_TILES,
   statTilesOff: [],
 };
@@ -190,6 +200,12 @@ export function readTimerSettings(input: unknown): TimerSettings {
     const version = parsed?.schemaVersion;
     if (!parsed || !TIMER_SETTINGS_VERSIONS.includes(version as number)) return DEFAULT_TIMER_SETTINGS;
 
+    // Read before the object because the ao5 strip falls back to it: a blob
+    // written before the two strips were separated carries one list, and both
+    // should carry on showing what that one list said rather than one of them
+    // silently reverting to stock.
+    const bench = events(parsed.benchEvents);
+
     // Field by field rather than a spread, so a key added here later gets its
     // default instead of arriving undefined out of an older saved blob.
     return {
@@ -235,7 +251,10 @@ export function readTimerSettings(input: unknown): TimerSettings {
       previewRight: clamp(parsed.previewRight, PREVIEW_MARGIN, 4000, DEFAULT_TIMER_SETTINGS.previewRight),
       previewBottom: clamp(parsed.previewBottom, PREVIEW_MARGIN, 4000, DEFAULT_TIMER_SETTINGS.previewBottom),
       mbldCount: clamp(parsed.mbldCount, MBLD_MIN, MBLD_MAX, DEFAULT_TIMER_SETTINGS.mbldCount),
-      benchEvents: events(parsed.benchEvents),
+      benchEvents: bench,
+      benchAo5Events: parsed.benchAo5Events === undefined
+        ? bench
+        : events(parsed.benchAo5Events),
       statTiles: tileOrder(parsed.statTiles),
       statTilesOff: knownTiles(parsed.statTilesOff),
     };

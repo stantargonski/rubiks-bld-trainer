@@ -1,4 +1,4 @@
-import { TILES, tileSpec } from '../timer/charts/tiles'
+import { TILES, tileSpec } from './tiles'
 
 interface StatTilesEditorProps {
   /** Every box, in the order they are drawn. */

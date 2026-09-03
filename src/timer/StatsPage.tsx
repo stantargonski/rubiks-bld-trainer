@@ -8,19 +8,21 @@ import { activeSession, type Solve, type TimerStore } from './types'
 import TimeChart from './charts/TimeChart'
 import Histogram from './charts/Histogram'
 import SummaryTiles from './charts/SummaryTiles'
+import StatTilesEditor from './charts/StatTilesEditor'
 import ActivityHeatmap from './charts/ActivityHeatmap'
 import AverageDetail from './AverageDetail'
 import type { AverageView } from './averageText'
-import { DAY, RANGES, SPANS, type Range } from './charts/ranges'
+import { applyWindow, RANGE_ALL, windowLabel, type TimeWindow } from './charts/filters'
+import RangePicker from './charts/RangePicker'
 import { BENCH_MAX, type TimerSettings } from './settings'
 
 /**
  * One of the two figures you'd quote someone, across the events you've chosen.
  *
- * Both cards ask the same question of the same events — one of a single, one of
- * an average — so both are this, and both carry the same picker. The list they
- * edit is one setting, so ticking an event in either updates both strips at
- * once; that is the point, not a collision.
+ * Both cards ask the same shape of question — one of a single, one of an average
+ * — so both are this, and both carry the same picker. Each edits a list of its
+ * own, though: the events worth quoting a single for are not always the ones you
+ * have enough solves in for the average to mean anything.
  *
  * Declared out here rather than inside the page: a component built during a
  * render is a new component every render, and React throws its state away each
@@ -61,7 +63,8 @@ function BenchCard({ title, bench, valueFor, decimals, onToggle }: {
         <div className="bench-picker">
           <p>
             Up to {BENCH_MAX}, so the row stays one line and the figures stay
-            the size you'd quote them at. The other card shows the same events.
+            the size you'd quote them at. Only this row — the other one keeps
+            its own events.
           </p>
           <div className="bench-options">
             {EVENTS.map((item) => {
@@ -96,12 +99,15 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
   // Opens on whatever you were just timing, which is nearly always what you
   // came here to look at.
   const [sessionId, setSessionId] = useState(() => activeSession(store).id)
-  const [range, setRange] = useState<Range>(365)
+  const [range, setRange] = useState<TimeWindow>({ kind: 'days', days: 365 })
   /** `all`, an `e:<event>` or an `s:<session>` — one control over two kinds of thing. */
   const [filter, setFilter] = useState('all')
-  const [span, setSpan] = useState(0)
+  /** How much of the session below is being looked at. */
+  const [span, setSpan] = useState<TimeWindow>(RANGE_ALL)
   /** The average whose solves are open for reading, or null. */
   const [detail, setDetail] = useState<AverageView | null>(null)
+  /** Whether the boxes below are open for rearranging. */
+  const [editingTiles, setEditingTiles] = useState(false)
 
   /**
    * "Now", read once when the page opens rather than on every render.
@@ -150,17 +156,22 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
     return bestAverage(byEvent.get(id) ?? [], 5)
   }
 
-  const bench = settings.benchEvents
-
-  /** Adds or removes one event from the strip, keeping the catalogue's order. */
-  function toggleBench(id: EventId) {
+  /**
+   * Adds or removes one event from one strip, keeping the catalogue's order.
+   *
+   * Takes the field it is editing rather than closing over one, because the two
+   * strips are the same component twice and the only thing separating them is
+   * which list they are pointed at.
+   */
+  function toggleBench(field: 'benchEvents' | 'benchAo5Events', id: EventId) {
+    const bench = settings[field]
     const next = bench.includes(id)
       ? bench.filter((item) => item !== id)
       : [...bench, id]
     if (next.length > BENCH_MAX) return
     onSettings({
       ...settings,
-      benchEvents: EVENTS.map((item) => item.id).filter((item) => next.includes(item)),
+      [field]: EVENTS.map((item) => item.id).filter((item) => next.includes(item)),
     })
   }
 
@@ -170,12 +181,19 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
     return store.sessions.find((item) => item.id === filter.slice(2))?.solves ?? []
   }, [filter, store, everySolve, byEvent])
 
-  /** The session's solves, cut down to the graph's window. */
-  const windowed = useMemo(() => {
-    if (span === 0) return session.solves
-    const from = now - span * DAY
-    return session.solves.filter((solve) => solve.id >= from)
-  }, [session, span, now])
+  /**
+   * The session's solves, cut down to the window.
+   *
+   * Everything in the card below reads this — the boxes as well as the two
+   * charts. They used to disagree: the boxes and the histogram's heading were
+   * quoting the whole session while the histogram underneath it drew the
+   * window, so setting the graph to a week left a heading that said one thing
+   * above bars that said another.
+   */
+  const windowed = useMemo(
+    () => applyWindow(session.solves, span, now),
+    [session, span, now],
+  )
 
   const trend = ao5TrendPerHour(windowed)
 
@@ -203,21 +221,21 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
       </section>
 
       {/* ---- the numbers you'd quote someone ---- */}
-      {/* Two cards, one question each, and one list of events behind both — so
-          either card's picker edits what the other one shows. */}
+      {/* Two cards, one question each, and a list of events per card — so either
+          picker edits its own strip and leaves the other one alone. */}
       <BenchCard
         title="all-time best single"
-        bench={bench}
+        bench={settings.benchEvents}
         valueFor={bestFor}
         decimals={decimals}
-        onToggle={toggleBench}
+        onToggle={(id) => toggleBench('benchEvents', id)}
       />
       <BenchCard
         title="all-time best ao5"
-        bench={bench}
+        bench={settings.benchAo5Events}
         valueFor={bestAo5For}
         decimals={decimals}
-        onToggle={toggleBench}
+        onToggle={(id) => toggleBench('benchAo5Events', id)}
       />
 
       {/* ---- when you practised ---- */}
@@ -241,14 +259,12 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
               </optgroup>
             </select>
 
-            <select
-              value={String(range)}
-              onChange={(change) => setRange(Number(change.target.value) as Range)}
-            >
-              {RANGES.map((item) => (
-                <option key={item.id} value={String(item.id)}>{item.name}</option>
-              ))}
-            </select>
+            <RangePicker
+              range={range}
+              solves={activitySolves}
+              now={now}
+              onChange={setRange}
+            />
           </div>
         </div>
 
@@ -303,11 +319,31 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
                 <option key={item.id} value={item.id}>{item.name}</option>
               ))}
             </select>
+            {/* Same control the bench strips carry, for the same reason: the
+                thing being edited is right underneath it, so there is nowhere
+                better to put it than beside what it changes. */}
+            <button
+              type="button"
+              className="bench-edit"
+              aria-expanded={editingTiles}
+              onClick={() => setEditingTiles(!editingTiles)}
+            >
+              {editingTiles ? 'done' : 'edit boxes'}
+            </button>
           </div>
         </div>
 
+        {editingTiles && (
+          <StatTilesEditor
+            order={settings.statTiles}
+            hidden={settings.statTilesOff}
+            onChange={(statTiles, statTilesOff) =>
+              onSettings({ ...settings, statTiles, statTilesOff })}
+          />
+        )}
+
         <SummaryTiles
-          solves={session.solves}
+          solves={windowed}
           decimals={decimals}
           event={event}
           order={settings.statTiles}
@@ -323,18 +359,12 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
             <i className="key ao100" /> ao100
             <i className="key pb" /> personal best
           </span>
-          <span className="chart-spans">
-            {SPANS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={span === item.id}
-                onClick={() => setSpan(item.id)}
-              >
-                {item.name}
-              </button>
-            ))}
-          </span>
+          <RangePicker
+            range={span}
+            solves={session.solves}
+            now={now}
+            onChange={setSpan}
+          />
         </h3>
 
         <TimeChart solves={windowed} decimals={decimals} />
@@ -351,7 +381,10 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
 
         <h3 className="chart-title">
           where they land
-          <span>ao5 now {formatTime(average(session.solves, 5), decimals)}</span>
+          <span>
+            {windowed.length} solves, {windowLabel(span)}
+            {' — '}ao5 now {formatTime(average(windowed, 5), decimals)}
+          </span>
         </h3>
         <Histogram solves={windowed} decimals={decimals} />
       </section>
