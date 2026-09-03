@@ -22,7 +22,8 @@ Add demo videos
 
 ## Import csTimer data
 
-    In csTimer: the wrench icon → Export → "Export to file". Drag and drop the .txt or open in the settings menu.
+In csTimer: the wrench icon → Export → "Export to file". Drag and drop the .txt or open in 
+the settings menu.
 
 ## Running it locally
 
