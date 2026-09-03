@@ -134,6 +134,21 @@ export default function DataSection() {
         One file holds pairs, solves, algs and settings.
       </p>
 
+      {snapshot && (
+        <div className="data-snapshot">
+          <h3>If settings are bugged on update</h3>
+          <p className="hint">
+            A copy of everything was taken automatically on{' '}
+            {new Date(snapshot.takenAt).toLocaleString()}.
+          </p>
+          <div className="actions">
+            <button type="button" onClick={() => void rollBack()}>
+              restore previous version settings
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Two steps, and the second one asks you to type the word. A single
           confirm is a reflex you can get through without reading; typing is the
           cheapest thing that cannot be done by accident, and this is the one
@@ -199,21 +214,6 @@ export default function DataSection() {
           </>
         )}
       </div>
-
-      {snapshot && (
-        <div className="data-snapshot">
-          <h3>If settings are bugged on update</h3>
-          <p className="hint">
-            A copy of everything was taken automatically on{' '}
-            {new Date(snapshot.takenAt).toLocaleString()}.
-          </p>
-          <div className="actions">
-            <button type="button" onClick={() => void rollBack()}>
-              restore previous version settings
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

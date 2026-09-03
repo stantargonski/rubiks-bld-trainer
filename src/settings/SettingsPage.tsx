@@ -409,16 +409,14 @@ export default function SettingsPage({
               </Row>
               <Row
                 label="difference from the last solve"
-                description="A smaller (-2.43) beside the clock, green when you went faster. The clock itself stays centred."
               >
                 <Toggle value={timer.showDelta} onChange={(v) => setTimer('showDelta', v)} />
               </Row>
-              <Row label="scramble preview" description="The scramble drawn as a cube. Drag its title bar to move it, its top-left corner to resize.">
+              <Row label="scramble preview">
                 <Toggle value={timer.showCubeNet} onChange={(v) => setTimer('showCubeNet', v)} />
               </Row>
               <Row
                 label="hide the preview for blindfolded events"
-                description="A picture of the scramble is the one thing you are not allowed to look at. Off if you want it back for checking a scramble."
               >
                 <Toggle
                   value={timer.hideBldPreview}
@@ -430,8 +428,7 @@ export default function SettingsPage({
                   still scale with the window and with the app-wide text size,
                   and this only says by how much more or less than usual. */}
               <Row
-                label="clock size"
-                description="How big the running time is, as a percentage of its usual size."
+                label="clock text size"
               >
                 <Stepper
                   value={timer.clockScale}
@@ -443,8 +440,7 @@ export default function SettingsPage({
                 />
               </Row>
               <Row
-                label="scramble size"
-                description="The same, for the scramble in the banner."
+                label="scramble text size"
               >
                 <Stepper
                   value={timer.scrambleScale}
@@ -457,7 +453,7 @@ export default function SettingsPage({
               </Row>
               <Row
                 label="hide everything while solving"
-                description="Fades the rail and the scramble the moment the clock starts."
+                description="Will only show timer update while solving."
               >
                 <Toggle
                   value={timer.hideUiWhileRunning}
@@ -467,7 +463,7 @@ export default function SettingsPage({
 
               <Row
                 label="how a time is entered"
-                description="Typed is for a stackmat: the digits fill from the right, so 1234 is 12.34 and 12345 is 1:23.45. Enter records it."
+                description="Typed is for a stackmat: 1234 is is read as 12.34 and 12345 is 1:23.45."
               >
                 <Choice
                   options={[
@@ -503,19 +499,18 @@ export default function SettingsPage({
 
               <Row
                 label="flat scramble bar"
-                description="Drops the panel behind the scramble so it sits straight on the background."
+                description="Removes the background of the scramble panel."
               >
                 <Toggle value={timer.flatScramble} onChange={(v) => setTimer('flatScramble', v)} />
               </Row>
               <Row
                 label="flat sidebar"
-                description="The same for the rail down the left."
+                description="Removes the background of the side panel."
               >
                 <Toggle value={timer.flatSidebar} onChange={(v) => setTimer('flatSidebar', v)} />
               </Row>
               <Row
                 label="monospaced scramble"
-                description="Every move the same width, so the scramble reads as columns."
               >
                 <Toggle value={timer.monoScramble} onChange={(v) => setTimer('monoScramble', v)} />
               </Row>
@@ -540,7 +535,7 @@ export default function SettingsPage({
                 />
               </Row>
 
-              <Row label="how decimals are shown">
+              <Row label="decimal appearance">
                 <Choice
                   options={[{ id: '2', name: '12.34' }, { id: '3', name: '12.345' }]}
                   value={timer.decimals === 3 ? '3' : '2'}
@@ -563,10 +558,10 @@ export default function SettingsPage({
           <DataSection />
           <CsTimerImport store={timerStore} onImport={onTimerStore} onOpenTimer={onOpenTimer} />
 
-          <h2 className="panel-title">starting over</h2>
+          <h2 className="panel-title">Restore Default Settings</h2>
           <Row
             label="restore the default settings"
-            description="Every setting on this page, back to stock. Solves, sessions, algs and letter pairs are left alone."
+            description="Only settings are affected. Solves, sessions, algs and letter pairs are not harmed."
           >
             <div className="actions">
               <button type="button" onClick={restoreDefaults}>restore defaults</button>
