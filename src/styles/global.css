@@ -1197,7 +1197,7 @@ textarea,
   border: 0;
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: calc(clamp(18px, 2.4vw, 32px) * var(--scramble-scale, 1));
+  font-size: calc(clamp(24px, 2.4vw, 32px) * var(--scramble-scale, 1));
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   line-height: 1.35;
@@ -1262,14 +1262,33 @@ textarea,
 .timer-stage > * {
   pointer-events: auto;
 }
-/* The clock is centred in the stage, and the goal helper hangs above it in the
-   same column — so the two share a centre line, and it is the window's centre
-   rather than the centre of whatever the rail leaves over. */
+/* The clock is centred in the stage — on the window's centre, rather than the
+   centre of whatever the rail leaves over.
+
+   Only the clock itself is in this column. Everything that reads off it hangs
+   below out of flow, so the number stays on the window's middle line however
+   many of those are showing. */
 .stage-clock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* The splits and the averages, stacked under the clock and centred on it
+   without taking up room above. Out of flow for the same reason the delta is:
+   in flow they would drag the clock up by half their height, and drop it back
+   down the moment they hid for a solve. */
+.clock-under {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  margin-top: 10px;
+  white-space: nowrap;
 }
 /* Under the scramble, in the main column's flow rather than in the stage. The
    stage is what centres the clock on the window, and anything sharing it pushes
@@ -1298,7 +1317,7 @@ textarea,
   bottom: 0.18em;
   margin-left: 10px;
   font-size: calc(22px * var(--font-scale));
-  font-weight: 700;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1308,7 +1327,7 @@ textarea,
 .clock {
   font-family: var(--font-timer);
   font-variant-numeric: tabular-nums;
-  font-size: calc(clamp(64px, 12vw, 140px) * var(--font-scale) * var(--clock-scale, 1));
+  font-size: calc(clamp(64px, 12vw, 240px) * var(--font-scale) * var(--clock-scale, 1));
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1;
@@ -1342,12 +1361,13 @@ textarea,
   display: flex;
   gap: 26px;
   color: var(--text-dim);
-  font-size: calc(17px * var(--font-scale));
+  font-size: calc(30px * var(--font-scale));
   font-variant-numeric: tabular-nums;
+  padding-top: 20px
 }
 .averages b {
   color: var(--text);
-  font-weight: 700;
+  font-weight: 400;
 }
 .timer-hint {
   margin: 0;

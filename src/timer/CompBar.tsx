@@ -27,7 +27,7 @@ export default function CompBar({
   let message: ReactNode
 
   if (!Number.isFinite(target)) {
-    message = 'Set a goal and the last solve of the round gets a number to beat.'
+    message = 'Set a goal for this ao5.'
   } else if (complete) {
     if (!Number.isFinite(result)) {
       tone = 'bad'
@@ -36,7 +36,7 @@ export default function CompBar({
       const hit = result <= target
       tone = hit ? 'good' : 'bad'
       message = hit
-        ? <>{format.id} <b>{formatTime(result, decimals)}</b> — goal met</>
+        ? <>{format.id} <b>{formatTime(result, decimals)}</b> — Nice job</>
         : <>{format.id} <b>{formatTime(result, decimals)}</b> — missed by {formatTime(result - target, decimals)}</>
     }
   } else if (done.length === format.size - 1) {
@@ -44,15 +44,15 @@ export default function CompBar({
 
     if (need === Infinity) {
       tone = 'good'
-      message = <>Already there — even a DNF keeps the {format.id} under {formatTime(target, decimals)}.</>
+      message = <>Nice your guaranteed to hit your goal.</>
     } else if (Number.isNaN(need)) {
       tone = 'bad'
-      message = <>Out of reach — no last solve gets this {format.id} under {formatTime(target, decimals)}.</>
+      message = <>Unfourtnately no last solve gets this {format.id} under {formatTime(target, decimals)}.</>
     } else {
-      message = <>Last solve: <b>{formatTime(need, decimals)}</b> or better for a {formatTime(target, decimals)} {format.id}.</>
+      message = <>Last solve: <b>{formatTime(need, decimals)}</b> or better is needed for a {formatTime(target, decimals)} {format.id}.</>
     }
   } else {
-    message = <>{done.length} of {format.size} — the number to beat appears on the last solve.</>
+    message = <></>
   }
 
   return (

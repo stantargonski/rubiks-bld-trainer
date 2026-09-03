@@ -141,10 +141,8 @@ function useNewBests(
     const before = seen.current
     seen.current = { sessionId, count, records }
 
-    if (!before || before.sessionId !== sessionId) return    // arriving, not improving
-    if (count !== before.count + 1) return                   // only an added solve can set one
-
-    const beaten = rows
+    const fresh = before && before.sessionId === sessionId && count === before.count + 1
+    const beaten = !fresh ? []:rows
       .filter((row) => {
         const now = row.record
         const then = before.records.get(row.label)
@@ -155,9 +153,9 @@ function useNewBests(
       })
       .map((row) => row.label)
 
+    setLit((prev) => (prev.size === 0 && beaten.length === 0 ? prev: new Set(beaten)))  
     if (beaten.length === 0) return
 
-    setLit(new Set(beaten))
     const id = setTimeout(() => setLit(new Set()), FLASH_MS)
     return () => clearTimeout(id)
   }, [rows, count, sessionId])

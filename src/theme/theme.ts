@@ -174,9 +174,6 @@ export const THEMES: Theme[] = [
       bg: '#e1e1e3', panel: '#f3f3f4', panel2: '#e7e7e9', line: '#c9c9cd',
       text: '#323437', textDim: '#6f747c', accent: '#c39a08', accentInk: '#ffffff',
       dead: '#d7d7da',
-      // The stock green and red are pitched to glow off a dark background; on
-      // paper they read as highlighter. Darkened until they carry their meaning
-      // against white instead.
       go: '#1f8a4c', holding: '#c62828',
     },
   },

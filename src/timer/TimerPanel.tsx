@@ -470,57 +470,60 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
               )}
             </div>
 
-            {typedEntry && (
-              <p className="entry-hint">
-                type the digits — 12345 is{' '}
-                {settings.typedDecimals === 3 ? '12.345' : '1:23.45'} — then enter. esc clears.
-              </p>
-            )}
+            {/* Everything that reads off the clock hangs below it out of flow,
+                for the same reason the delta hangs beside it: in flow these
+                would be centred along with the clock, so the clock would sit
+                half their height above the window's middle and jump back down
+                every time they hid for a solve. */}
+            <div className="clock-under">
+              {/* The session's mean memo and mean exec, not the last solve's
+                  split — which is the half of a blindfolded solve you are
+                  actually training, and the one figure the averages below
+                  cannot show you. The last solve's own split is still a click
+                  away in the list.
 
-            {/* The session's mean memo and mean exec, not the last solve's split
-                — which is the half of a blindfolded solve you are actually
-                training, and the one figure the averages below cannot show you.
-                The last solve's own split is still a click away in the list.
+                  Gated on the event rather than on the last solve having a
+                  split, so the line is there from the first solve of a session
+                  instead of appearing once one lands. It updates on exactly the
+                  same path as the ao5 below it: `solves` is derived every
+                  render. */}
+              {event.split && !timing && (
+                <div className="split">
+                  <span>memo <b>{formatTime(meanMemo(solves), settings.decimals)}</b></span>
+                  <span>exec <b>{formatTime(meanExec(solves), settings.decimals)}</b></span>
+                </div>
+              )}
 
-                Gated on the event rather than on the last solve having a split,
-                so the line is there from the first solve of a session instead of
-                appearing once one lands. It updates on exactly the same path as
-                the ao5 below it: `solves` is derived every render. */}
-            {event.split && !timing && (
-              <div className="split">
-                <span>memo <b>{formatTime(meanMemo(solves), settings.decimals)}</b></span>
-                <span>exec <b>{formatTime(meanExec(solves), settings.decimals)}</b></span>
-              </div>
-            )}
-
-            {/* Hidden while the clock is running whatever else is on screen —
-                an average you can't change yet is the definition of a distraction. */}
-            {settings.showAverages && !timing && (
-              <div className="averages">
-                {[5, 12].map((size) => {
-                  const value = average(solves, size)
-                  return (
-                    <span key={size}>
-                      ao{size}{' '}
-                      <b>
-                        <button
-                          type="button"
-                          className="ao-open"
-                          // Nothing to open before there are enough solves for
-                          // the average to exist.
-                          disabled={Number.isNaN(value)}
-                          onClick={() => setDetail({
-                            label: `ao${size}`, solves: solves.slice(-size),
-                          })}
-                        >
-                          {formatTime(value, settings.decimals)}
-                        </button>
-                      </b>
-                    </span>
-                  )
-                })}
-              </div>
-            )}
+              {/* Hidden while the clock is running whatever else is on screen —
+                  an average you can't change yet is the definition of a
+                  distraction. */}
+              {settings.showAverages && !timing && (
+                <div className="averages">
+                  {[5, 12].map((size) => {
+                    const value = average(solves, size)
+                    return (
+                      <span key={size}>
+                        ao{size}{' '}
+                        <b>
+                          <button
+                            type="button"
+                            className="ao-open"
+                            // Nothing to open before there are enough solves for
+                            // the average to exist.
+                            disabled={Number.isNaN(value)}
+                            onClick={() => setDetail({
+                              label: `ao${size}`, solves: solves.slice(-size),
+                            })}
+                          >
+                            {formatTime(value, settings.decimals)}
+                          </button>
+                        </b>
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
