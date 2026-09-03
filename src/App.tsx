@@ -33,34 +33,28 @@ const SECTIONS: { id: Section; label: string }[] = [
 ];
 
 /**
- * The wordmark, and the way back to the timer — the way a logo is on every other
- * site.
+ * The wordmark, and the switch that puts the bar away — the way a logo is on
+ * every other site, doing the one job there is room for it to do here.
  *
  * Its own component because it is rendered twice, in the bar and floating over
  * the content once the bar is stowed, and the two must not be able to drift.
+ * That it is the same control in both places is the whole point: whatever put
+ * the bar away is sitting where it left it, waiting to bring it back.
  */
-function Brand({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" className="brand" onClick={onClick} title="back to the timer">
-      tstimer
-    </button>
-  )
-}
-
-/** Puts the bar away, and — floating in its place — brings it back. */
-function StowToggle({ appearance, onAppearance }: {
+function Brand({ appearance, onAppearance }: {
   appearance: Appearance
   onAppearance: (next: Appearance) => void
 }) {
+  const stowed = appearance.topBarStowed
   return (
     <button
       type="button"
-      className="topbar-stow"
-      aria-expanded={!appearance.topBarStowed}
-      title={appearance.topBarStowed ? 'show the menu' : 'hide the menu'}
-      onClick={() => onAppearance({ ...appearance, topBarStowed: !appearance.topBarStowed })}
+      className="brand"
+      aria-expanded={!stowed}
+      title={stowed ? 'show the menu' : 'hide the menu'}
+      onClick={() => onAppearance({ ...appearance, topBarStowed: !stowed })}
     >
-      {appearance.topBarStowed ? '⌄' : '⌃'}
+      tstimer
     </button>
   )
 }
@@ -185,9 +179,9 @@ export default function App() {
 
       {/* Stowed, the bar is gone rather than shortened — the point of stowing it
           is the screen it gives back, and a strip left behind is a strip you
-          paid for twice. What replaces it is the same two controls floating over
-          the content: the wordmark, so there is still a way back to the timer,
-          and the chevron that brings the bar back.
+          paid for twice. What replaces it is the wordmark alone, floating over
+          the content: the thing you pressed to put the bar away, still there to
+          bring it back.
 
           Two wordmarks, one mounted at a time. They carry the same class and so
           the same size, which is the whole reason it is written twice rather
@@ -195,12 +189,11 @@ export default function App() {
           reads as the app having gone away. */}
       {appearance.topBarStowed ? (
         <div className="topbar-float">
-          <Brand onClick={() => setSection('timer')} />
-          <StowToggle appearance={appearance} onAppearance={updateAppearance} />
+          <Brand appearance={appearance} onAppearance={updateAppearance} />
         </div>
       ) : (
         <header className="topbar">
-          <Brand onClick={() => setSection('timer')} />
+          <Brand appearance={appearance} onAppearance={updateAppearance} />
           <nav className="nav">
             {SECTIONS.map((item) => (
               <button
@@ -212,7 +205,6 @@ export default function App() {
               </button>
             ))}
           </nav>
-          <StowToggle appearance={appearance} onAppearance={updateAppearance} />
         </header>
       )}
 

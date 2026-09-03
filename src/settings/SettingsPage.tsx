@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import CsTimerImport from './CsTimerImport'
 import DataSection from './DataSection'
-import StatTilesEditor from './StatTilesEditor'
 import TimerPreview from './TimerPreview'
 import { FONTS, THEMES, type Appearance } from '../theme/theme'
 import { clearBackground, downscale, putBackground } from '../theme/imageStore'
@@ -12,7 +11,6 @@ import type { TimerStore } from '../timer/types'
 const SECTIONS = [
   { id: 'appearance', name: 'appearance' },
   { id: 'timer', name: 'timer' },
-  { id: 'stats', name: 'stats' },
   { id: 'data', name: 'data' },
 ]
 
@@ -274,7 +272,7 @@ export default function SettingsPage({
 
           <Row
             label="menu bar"
-            description="Stows the bar at the top down to the wordmark, which stays as the way back to the timer."
+            description="Stows the bar at the top down to the wordmark, which stays behind to bring it back. Pressing the wordmark does the same thing."
           >
             <Toggle
               value={!appearance.topBarStowed}
@@ -504,24 +502,6 @@ export default function SettingsPage({
               <TimerPreview settings={timer} />
             </div>
           </div>
-        </section>
-
-        <section className="settings-group" id="settings-stats">
-          <h2 className="panel-title">stats</h2>
-
-          <Row
-            label="the boxes, and their order"
-            description="What the session summary shows, top to bottom. They flow left to right across the page in this order."
-          >
-            <span className="setting-aside">{timer.statTiles.length - timer.statTilesOff.length} shown</span>
-          </Row>
-
-          <StatTilesEditor
-            order={timer.statTiles}
-            hidden={timer.statTilesOff}
-            onChange={(statTiles, statTilesOff) =>
-              onTimer({ ...timer, statTiles, statTilesOff })}
-          />
         </section>
 
         <section className="settings-group" id="settings-data">
