@@ -552,10 +552,12 @@ export default function SettingsPage({
 
         <section className="settings-group" id="settings-data">
           <h2 className="panel-title">data</h2>
+          <DataSection />
+
           {/* Importing from csTimer is one of the things you do with your data,
               not a subject of its own — under the same heading, so it reads as
               part of the same job rather than as another section to find. */}
-          <DataSection />
+          <CsTimerImport store={timerStore} onImport={onTimerStore} onOpenTimer={onOpenTimer} />
 
           <h2 className="panel-title">Restore Default Settings</h2>
           <Row
