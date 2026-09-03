@@ -16,6 +16,12 @@
   --fill-2: color-mix(in srgb, var(--accent) 72%, var(--panel));
   --fill-3: var(--accent);
   --flag: #ffc233;
+  /* The clock, ready and held. Up here with the rest of the palette rather than
+     in a second :root down beside the timer, which is where they used to live —
+     out of sight of theme.ts, so every theme ran this same pair whether or not
+     its background was dark. */
+  --go: #3fbf6f;
+  --holding: #ff2934;
   /* western scheme — the arrangement every scramble image online uses */
   --cube-u: #eef2f8;
   --cube-d: #ffd23f;
@@ -105,6 +111,14 @@ textarea,
   flex-direction: column;
   height: 100%;
 }
+/* Scrolls sideways rather than wrapping or shrinking. The bar wants 494px to
+   lay out, which is wider than every mainstream phone — and with nothing said
+   about the overflow, the last section simply fell off the right edge with no
+   way to reach it. Scrolling degrades the same way however many sections there
+   are, which a breakpoint tightening the padding would not.
+
+   The scrollbar itself is hidden: the bar is 56px tall and a horizontal one
+   would eat a visible slice of that on the platforms that reserve space. */
 .topbar {
   display: flex;
   align-items: center;
@@ -113,10 +127,21 @@ textarea,
   height: 56px;
   border-bottom: 1px solid var(--line);
   flex: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
   background: color-mix(in srgb, var(--bg) calc(var(--panel-alpha) * 100%), transparent);
   backdrop-filter: blur(var(--panel-blur));
 }
+.topbar::-webkit-scrollbar {
+  display: none;
+}
 .brand {
+  /* Neither of the bar's two children may shrink: in a scrolling row the
+     default is to compress until it fits, which is the squeeze this was
+     meant to replace. */
+  flex: none;
   padding: 0;
   background: none;
   border: 0;
@@ -132,9 +157,12 @@ textarea,
 }
 .nav {
   display: flex;
+  flex: none;
   gap: 4px;
 }
 .nav button {
+  flex: none;
+  white-space: nowrap;
   background: none;
   border: 0;
   padding: 7px 12px;
@@ -496,10 +524,18 @@ textarea,
 }
 .chip:hover { color: var(--text); }
 .chip[aria-pressed='true'] { color: var(--accent-ink); border-color: transparent; }
-.chip.c0[aria-pressed='true'] { background: #4a515c; }
-.chip.c1[aria-pressed='true'] { background: #b4502c; }
-.chip.c2[aria-pressed='true'] { background: #1c5cab; }
-.chip.c3[aria-pressed='true'] { background: #2f8f5b; }
+/* The same four colours the grid fills a cell with, because these are the four
+   levels that fill it. They used to be four fixed hexes, so the chip you
+   pressed and the square it coloured in were different colours under every
+   theme but the stock one.
+
+   The ink follows whichever colour dominates the mix: 0 and 1 are mostly panel
+   and want ordinary text over them, 2 and 3 are mostly accent, which is what
+   --accent-ink is for. */
+.chip.c0[aria-pressed='true'] { background: var(--fill-0); color: var(--text); }
+.chip.c1[aria-pressed='true'] { background: var(--fill-1); color: var(--text); }
+.chip.c2[aria-pressed='true'] { background: var(--fill-2); }
+.chip.c3[aria-pressed='true'] { background: var(--fill-3); }
 .hint { margin: 14px 0 0; font-size: calc(14px * var(--font-scale)); color: var(--text-dim); }
 /* ---------- fill mode ---------- */
 .actions { display: flex; gap: 4px; margin-top: 16px; }
@@ -750,10 +786,6 @@ textarea,
 
 
 /* ---------- timer ---------- */
-:root {
-  --go: #3fbf6f;
-  --holding: #ff2934;
-}
 
 /* ----- frame ----- */
 .timer-frame {
@@ -1643,6 +1675,108 @@ textarea,
   outline-offset: 1px;
 }
 
+/* ----- a palette of your own ----- */
+.theme-editor {
+  margin: 4px 0 8px;
+  padding: 16px 18px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.theme-editor section + section {
+  margin-top: 22px;
+}
+.theme-editor h3 {
+  margin: 0;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.theme-editor > section > p {
+  margin: 4px 0 12px;
+  max-width: 62ch;
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-dim);
+}
+/* Wide enough for a hex field and its swatch, and no wider — the point of the
+   grid is that eighteen colours read as three short lists rather than a form. */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+.swatch-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.swatch-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 700;
+}
+.swatch-name i {
+  color: var(--text-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-style: normal;
+  font-weight: 500;
+}
+.swatch-controls {
+  display: flex;
+  gap: 6px;
+}
+/* The browser draws its own box and padding inside a colour input; stripped
+   back so the control is the colour rather than a chip of it. */
+.swatch-controls input[type='color'] {
+  flex: none;
+  width: 42px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.swatch-controls input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+.swatch-controls input[type='color']::-webkit-color-swatch {
+  border: 0;
+  border-radius: 7px;
+}
+.swatch-controls input[type='color']::-moz-color-swatch {
+  border: 0;
+  border-radius: 7px;
+}
+.swatch-controls input[type='text'] {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.swatch-controls input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.theme-editor .actions {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
 /* ----- stats ----- */
 .stats-page {
   display: flex;
@@ -2103,7 +2237,9 @@ textarea,
 @media (max-width: 820px) {
   .timer-rail { display: none; }
   .rail-open { display: none; }
-  .scramble-preview { display: none; }
+  /* .scramble-preview is hidden further down, immediately after its own rule.
+     A media query carries no extra specificity, so hiding it from up here lost
+     to the `display: flex` that comes later in the file. */
 }
 /* ----- event picker ----- */
 .event-picker select,
@@ -2194,6 +2330,11 @@ textarea,
   backdrop-filter: blur(var(--panel-blur));
   border: 1px solid var(--line);
   border-radius: var(--radius);
+}
+/* Below the rule above, not up with the rest of the narrow-screen rules: the
+   two have equal specificity, so this only wins by coming later. */
+@media (max-width: 820px) {
+  .scramble-preview { display: none; }
 }
 .preview-grip {
   position: absolute;
@@ -2692,6 +2833,61 @@ textarea,
   background: var(--accent);
   color: var(--accent-ink);
 }
+/* ----- typing a range the buttons don't offer ----- */
+/* A full row of its own in both places it appears — the chart heading and a
+   card head are each a wrapping flex row, and this is a form, not another
+   chip to sit at the end of the line. */
+.range-custom {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.range-custom label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.range-custom input {
+  padding: 5px 8px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.range-custom input[type='number'] {
+  width: 6em;
+}
+.range-custom input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.range-note {
+  margin-left: auto;
+  color: var(--text-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 /* The one sentence that says whether any of this is working. */
 .chart-note {
   margin: 10px 0 0;
@@ -2928,7 +3124,9 @@ textarea,
 .solve-actions .danger.armed {
   background: var(--holding);
   border-color: transparent;
-  color: #fff;
+  /* Not a bare white: on a theme whose holding colour is pale, white on it is
+     nothing at all. This is the theme's own answer to "text on a strong fill". */
+  color: var(--accent-ink);
 }
 
 /* ----- stowing the top bar ----- */
@@ -3048,8 +3246,13 @@ textarea,
 }
 
 /* ----- rearranging the stats boxes ----- */
+/* The button that opens this sits in a card head beside a select, where the
+   24px the bench strips need to clear their figures is just a gap. */
+.card-controls .bench-edit {
+  margin-left: 0;
+}
 .tile-editor {
-  margin-top: 6px;
+  margin: 6px 0 16px;
 }
 .tile-list {
   margin: 0;
@@ -3162,7 +3365,7 @@ textarea,
   border-color: color-mix(in srgb, var(--holding) 45%, transparent);
 }
 .actions button.danger:hover:not(:disabled) {
-  color: #fff;
+  color: var(--accent-ink);
   background: var(--holding);
   border-color: transparent;
 }

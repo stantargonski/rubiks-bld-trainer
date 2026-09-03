@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import CsTimerImport from './CsTimerImport'
 import DataSection from './DataSection'
 import TimerPreview from './TimerPreview'
-import { FONTS, THEMES, type Appearance } from '../theme/theme'
+import ThemeEditor from './ThemeEditor'
+import {
+  CUSTOM_THEME_ID, FONTS, paletteOf, seedCustomTheme, THEMES, type Appearance,
+} from '../theme/theme'
 import { clearBackground, downscale, putBackground } from '../theme/imageStore'
 import { SCALE_MAX, SCALE_MIN, type TimerSettings } from '../timer/settings'
 import type { TimerStore } from '../timer/types'
@@ -137,6 +140,8 @@ export default function SettingsPage({
 }: SettingsPageProps) {
   const picker = useRef<HTMLInputElement>(null)
   const [here, setHere] = useState(SECTIONS[0].id)
+  /** Whether the palette is open for editing. */
+  const [editingTheme, setEditingTheme] = useState(appearance.themeId === CUSTOM_THEME_ID)
 
   function setAppearance<K extends keyof Appearance>(key: K, value: Appearance[K]) {
     onAppearance({ ...appearance, [key]: value })
@@ -170,6 +175,19 @@ export default function SettingsPage({
     }
     return () => { watcher.disconnect() }
   }, [])
+
+  // What the custom chip paints itself with: the palette if there is one, and
+  // otherwise the theme it would be seeded from.
+  const customColors = paletteOf(
+    appearance.customTheme ?? seedCustomTheme(
+      appearance.themeId === CUSTOM_THEME_ID ? THEMES[0].id : appearance.themeId,
+    ),
+  )
+  const custom = {
+    background: customColors.bg,
+    color: customColors.text,
+    borderColor: customColors.line,
+  }
 
   function jump(id: string) {
     setHere(id)
@@ -243,8 +261,41 @@ export default function SettingsPage({
                   <i style={{ background: theme.colors.accent }} />
                 </button>
               ))}
+
+              {/* Drawn from the palette it selects, exactly like the ten before
+                  it — a chip that showed stock colours would be the one chip on
+                  the row not telling you what it does. */}
+              <button
+                type="button"
+                className="theme-chip"
+                aria-pressed={appearance.themeId === CUSTOM_THEME_ID}
+                aria-expanded={editingTheme}
+                style={custom}
+                onClick={() => {
+                  // First press builds a palette as well as opening the editor,
+                  // seeded from the theme on screen, so pressing it changes
+                  // nothing about how the app looks until you change something.
+                  if (appearance.themeId !== CUSTOM_THEME_ID) {
+                    onAppearance({
+                      ...appearance,
+                      themeId: CUSTOM_THEME_ID,
+                      customTheme: appearance.customTheme ?? seedCustomTheme(appearance.themeId),
+                    })
+                    setEditingTheme(true)
+                  } else {
+                    setEditingTheme(!editingTheme)
+                  }
+                }}
+              >
+                <span>Custom</span>
+                <i style={{ background: customColors.accent }} />
+              </button>
             </div>
           </Row>
+
+          {editingTheme && (
+            <ThemeEditor appearance={appearance} onAppearance={onAppearance} />
+          )}
 
           <Row label="interface font">
             <Choice

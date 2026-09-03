@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { formatTime } from '../timer/format'
-import type { TimerSettings } from '../timer/settings'
+import { DEFAULT_TIMER_SETTINGS, type TimerSettings } from '../timer/settings'
 
 /**
  * What the timer will look like, shown next to the switches that change it.
@@ -108,14 +108,23 @@ export default function TimerPreview({ settings }: { settings: TimerSettings }) 
             </div>
 
             <div className="timer-dock">
+              {/* Pinned to the size and corner the panel ships at, rather than to
+                  wherever you last dragged the real one. The mock is a fixed
+                  0.3 scale, so mirroring the setting made this box grow with it
+                  until it covered the clock — and there is no control for that
+                  size on this page, so there was never anything here to preview.
+                  The offsets are pinned for the same reason: they clamp to 4000
+                  and the mock clips, so a panel dragged off to one side used to
+                  put this box outside the frame entirely and make the switch
+                  below look broken. */}
               {settings.showCubeNet && (
                 <div
                   className="scramble-preview"
                   style={{
-                    width: settings.previewWidth,
-                    height: settings.previewHeight,
-                    right: settings.previewRight,
-                    bottom: settings.previewBottom,
+                    width: DEFAULT_TIMER_SETTINGS.previewWidth,
+                    height: DEFAULT_TIMER_SETTINGS.previewHeight,
+                    right: DEFAULT_TIMER_SETTINGS.previewRight,
+                    bottom: DEFAULT_TIMER_SETTINGS.previewBottom,
                   }}
                 >
                   <span className="preview-title">
