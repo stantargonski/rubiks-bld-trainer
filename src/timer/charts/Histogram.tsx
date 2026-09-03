@@ -11,9 +11,8 @@ import { effectiveMs, type Solve } from '../types'
 
 const WIDTH = 720
 const HEIGHT = 200
-// The top gap is a lane for the mean's label, which would otherwise land on
-// top of the count printed above the tallest bar.
-const PAD = { top: 26, right: 12, bottom: 30, left: 12 }
+// Just enough headroom for the count printed above the tallest bar.
+const PAD = { top: 8, right: 12, bottom: 30, left: 12 }
 const TARGET_BINS = 14
 
 /**
@@ -40,11 +39,9 @@ function binWidth(span: number): number {
 interface HistogramProps {
   solves: Solve[]
   decimals: 2 | 3
-  /** The vertical rule at the mean. */
-  showMean?: boolean
 }
 
-export default function Histogram({ solves, decimals, showMean = true }: HistogramProps) {
+export default function Histogram({ solves, decimals }: HistogramProps) {
   const times = solves.map(effectiveMs).filter((value) => Number.isFinite(value))
 
   if (times.length < 3) {
@@ -72,11 +69,6 @@ export default function Histogram({ solves, decimals, showMean = true }: Histogr
 
   // A label under every bar gets unreadable past a handful, so they thin out.
   const labelEvery = Math.ceil(bins / 8)
-
-  // The x axis runs linearly from `first` over `bins * width` of time, mapped
-  // onto exactly `plotWidth`, so a time converts straight into a coordinate.
-  const meanMs = times.reduce((sum, value) => sum + value, 0) / times.length
-  const meanX = PAD.left + ((meanMs - first) / (bins * width)) * plotWidth
 
   return (
     <svg
@@ -128,27 +120,6 @@ export default function Histogram({ solves, decimals, showMean = true }: Histogr
           </g>
         )
       })}
-
-      {/* Over the bars rather than behind them: it is the one line on this
-          chart you are meant to read a value off.
-
-          The mean of `times`, which is what the bars were built from, and not
-          stats.ts's mean — that one is DNF-poisoned and returns Infinity, which
-          would put the line off the chart entirely on a single failed solve. */}
-      {showMean && (
-        <g className="mean-line">
-          <line x1={meanX} x2={meanX} y1={PAD.top} y2={PAD.top + plotHeight} />
-          <text
-            className="axis"
-            x={meanX}
-            y={PAD.top - 10}
-            textAnchor={meanX > WIDTH / 2 ? 'end' : 'start'}
-            dx={meanX > WIDTH / 2 ? -5 : 5}
-          >
-            mean {formatTime(meanMs, decimals)}
-          </text>
-        </g>
-      )}
 
       {/* The closing edge, so the last bar's span is readable too. */}
       <text className="axis" x={PAD.left + bins * barWidth} y={HEIGHT - 10} textAnchor="middle">

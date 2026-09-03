@@ -36,6 +36,15 @@ export interface TimerSettings {
   /** The gap to the solve before, beside the clock — (-2.43) in green, (+1.07) in red. */
   showDelta: boolean;
   showCubeNet: boolean;
+  /**
+   * Keep the preview off for blindfolded events.
+   *
+   * A picture of the scramble is the one thing a blindfolded solve is not
+   * allowed to look at, so it is off by default — but only for those events, and
+   * `showCubeNet` is left alone, so switching back to a sighted event brings the
+   * preview straight back without touching a setting.
+   */
+  hideBldPreview: boolean;
   hideUiWhileRunning: boolean;
   /** Drop the panel fill and border behind the scramble bar / the rail, so each
       sits straight on the background instead of in a box of its own. */
@@ -43,6 +52,19 @@ export interface TimerSettings {
   flatSidebar: boolean;
   /** Scramble in a monospaced face, so the moves line up in columns. */
   monoScramble: boolean;
+  /**
+   * The clock and the scramble, as a percentage of their stock size.
+   *
+   * Percentages rather than fractions because `readTimerSettings` rounds every
+   * number it reads, which would flatten 1.25 to 1. They multiply the sizes the
+   * stylesheet already computes rather than replacing them, so both still scale
+   * with the window and with the app-wide text size.
+   */
+  clockScale: number;
+  scrambleScale: number;
+  /** The rail, collapsed out of the way. Left in the timer's settings rather
+      than the appearance ones because it is a part of the timer, not of the app. */
+  railStowed: boolean;
   /** The scramble preview panel's size, as the user last dragged it. */
   previewWidth: number;
   previewHeight: number;
@@ -73,8 +95,6 @@ export interface TimerSettings {
   statTiles: string[];
   /** Which of them are switched off. */
   statTilesOff: string[];
-  /** The vertical line at the mean on the histogram. */
-  showHistogramMean: boolean;
 }
 
 /**
@@ -102,10 +122,14 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   showAverages: true,
   showDelta: true,
   showCubeNet: true,
+  hideBldPreview: true,
   hideUiWhileRunning: true,
   flatScramble: false,
   flatSidebar: false,
   monoScramble: false,
+  clockScale: 100,
+  scrambleScale: 100,
+  railStowed: false,
   previewWidth: 320,
   previewHeight: 268,
   previewRight: 16,
@@ -114,7 +138,6 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   benchEvents: DEFAULT_BENCH_EVENTS,
   statTiles: DEFAULT_STAT_TILES,
   statTilesOff: [],
-  showHistogramMean: true,
 };
 
 export const TIMER_SETTINGS_KEY = 'timer.settings.v1';
@@ -131,6 +154,11 @@ export const PREVIEW_MARGIN = -40;
 
 export const MBLD_MIN = 2;
 export const MBLD_MAX = 60;
+
+/** How far the clock and the scramble may be scaled, as a percentage. Small
+    enough to fit a phone in landscape, large enough to read across a room. */
+export const SCALE_MIN = 60;
+export const SCALE_MAX = 200;
 
 export function loadTimerSettings(): TimerSettings {
   try {
@@ -186,10 +214,16 @@ export function readTimerSettings(input: unknown): TimerSettings {
       showAverages: bool(parsed.showAverages, true),
       showDelta: bool(parsed.showDelta, true),
       showCubeNet: bool(parsed.showCubeNet, true),
+      hideBldPreview: bool(parsed.hideBldPreview, true),
       hideUiWhileRunning: bool(parsed.hideUiWhileRunning, true),
       flatScramble: bool(parsed.flatScramble, false),
       flatSidebar: bool(parsed.flatSidebar, false),
       monoScramble: bool(parsed.monoScramble, false),
+      clockScale: clamp(parsed.clockScale, SCALE_MIN, SCALE_MAX, DEFAULT_TIMER_SETTINGS.clockScale),
+      scrambleScale: clamp(
+        parsed.scrambleScale, SCALE_MIN, SCALE_MAX, DEFAULT_TIMER_SETTINGS.scrambleScale,
+      ),
+      railStowed: bool(parsed.railStowed, false),
       previewWidth: clamp(
         parsed.previewWidth, PREVIEW_MIN, PREVIEW_MAX, DEFAULT_TIMER_SETTINGS.previewWidth,
       ),
@@ -204,7 +238,6 @@ export function readTimerSettings(input: unknown): TimerSettings {
       benchEvents: events(parsed.benchEvents),
       statTiles: tileOrder(parsed.statTiles),
       statTilesOff: knownTiles(parsed.statTilesOff),
-      showHistogramMean: bool(parsed.showHistogramMean, true),
     };
   } catch {
     return DEFAULT_TIMER_SETTINGS;

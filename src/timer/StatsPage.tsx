@@ -76,6 +76,11 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
     return best(byEvent.get(id) ?? [])
   }
 
+  /** The same, for the best ao5 that event has ever produced. */
+  function bestAo5For(id: EventId): number {
+    return bestAverage(byEvent.get(id) ?? [], 5)
+  }
+
   const bench = settings.benchEvents
 
   /** Adds or removes one event from the strip, keeping the catalogue's order. */
@@ -174,6 +179,22 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
         )}
       </section>
 
+      {/* The same shape and the same events as the card above it, because it is
+          the same question asked of an average instead of a single. No edit
+          button of its own: one list of events drives both cards, and two
+          controls writing it would only ever disagree. */}
+      <section className="card">
+        <div className="bench-strip">
+          <h2 className="bench-title">all-time best ao5</h2>
+          {bench.map((id) => (
+            <div className="bench" key={id}>
+              <span className="bench-label">{eventOf(id).short}</span>
+              <strong className="bench-value">{formatTime(bestAo5For(id), decimals)}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ---- when you practised ---- */}
       <section className="card">
         <div className="card-head">
@@ -262,10 +283,6 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
 
         <SummaryTiles
           solves={session.solves}
-          // Every solve of this event rather than this session's, which is what
-          // "all-time" has to mean — the boxes that say so are asking about the
-          // event, and sessions are how you chose to divide it up.
-          allTime={byEvent.get(session.event) ?? []}
           decimals={decimals}
           event={event}
           order={settings.statTiles}
@@ -310,26 +327,8 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
         <h3 className="chart-title">
           where they land
           <span>ao5 now {formatTime(average(session.solves, 5), decimals)}</span>
-          {/* Beside the chart it draws on, not buried in settings — it is the
-              kind of thing you switch off for one look and back on after. */}
-          <span className="chart-spans">
-            <button
-              type="button"
-              aria-pressed={settings.showHistogramMean}
-              onClick={() => onSettings({
-                ...settings,
-                showHistogramMean: !settings.showHistogramMean,
-              })}
-            >
-              mean line
-            </button>
-          </span>
         </h3>
-        <Histogram
-          solves={windowed}
-          decimals={decimals}
-          showMean={settings.showHistogramMean}
-        />
+        <Histogram solves={windowed} decimals={decimals} />
       </section>
 
       {detail && (

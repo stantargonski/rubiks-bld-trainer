@@ -28,6 +28,30 @@ export function formatTime(ms: number, decimals: Decimals = 2): string {
 }
 
 /**
+ * Local calendar date as `2026-09-02`.
+ *
+ * Not toLocaleDateString: this ends up in text people paste somewhere else,
+ * where an unlabelled 03/09 is ambiguous. Local rather than UTC, because the day
+ * you remember solving on is the one your clock showed.
+ */
+export function dateStamp(when: Date = new Date()): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}`;
+}
+
+/**
+ * Where a pasted block came from, in one line.
+ *
+ * Shared so every copyable thing says it the same way. It goes at the top: a
+ * block pasted into a chat is read from the first line down, and "which timer,
+ * and when" is the context that goes missing first — it is no use sitting under
+ * a hundred solves nobody scrolled to.
+ */
+export function attribution(takenAt: Date = new Date()): string {
+  return `From tstimer, taken on ${dateStamp(takenAt)}`;
+}
+
+/**
  * The other direction, for a goal you type: "18.42", "1:23.4" and "83" all
  * parse. NaN means it isn't a time yet — which formatTime renders as an em
  * dash, so a half-typed goal shows as nothing rather than as a wrong number.

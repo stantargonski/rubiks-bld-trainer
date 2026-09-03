@@ -1,4 +1,4 @@
-import { formatTime } from './format';
+import { attribution, formatTime } from './format';
 import { trimCount, trimmedAverage } from './stats';
 import { effectiveMs, type Solve } from './types';
 
@@ -28,13 +28,6 @@ export interface AverageView {
    * worth quoting at all. Left out, the average is computed as before.
    */
   value?: number;
-}
-
-/** Local calendar date as `2026-09-02`. Not toLocaleDateString: this ends up in
-    text people paste somewhere else, where an unlabelled 03/09 is ambiguous. */
-function dateStamp(when: Date): string {
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}`;
 }
 
 export function averageText(
@@ -70,14 +63,14 @@ export function averageText(
     return `${number}. ${shown[index].padEnd(timeWidth)}  ${solve.scramble}`.trimEnd();
   });
 
-  // Where the block came from, at the bottom. A pasted average outlives the
-  // conversation it was pasted into, and "which timer, and when" is the context
-  // that goes missing first.
+  // Where the block came from, above the figure it belongs to. A pasted average
+  // outlives the conversation it was pasted into, and "which timer, and when" is
+  // the context that goes missing first — so it leads rather than trails, where
+  // it is read before the number instead of after the last solve nobody scrolled to.
   return [
+    attribution(takenAt),
     `${label}: ${formatTime(result, decimals)}`,
     '',
     ...lines,
-    '',
-    `From tstimer, taken on ${dateStamp(takenAt)}`,
   ].join('\n');
 }

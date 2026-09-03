@@ -21,8 +21,6 @@ export const TILES: TileSpec[] = [
   { id: 'solves', name: 'solves' },
   { id: 'time', name: 'time solving' },
   { id: 'best', name: 'best single' },
-  // Directly after the session best, which is the figure it puts in context.
-  { id: 'allTimeBestAo5', name: 'all-time best ao5' },
   { id: 'mean', name: 'mean' },
   { id: 'deviation', name: 'deviation' },
   { id: 'bestAo5', name: 'best ao5' },

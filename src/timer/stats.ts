@@ -27,6 +27,10 @@ export function worst(solves: Solve[]): number {
 /**
  * Plain mean of times already reduced to their effective values. One DNF makes
  * the whole thing a DNF — there is nothing to trim it out of.
+ *
+ * This is the WCA's mean-of-3, which is what `comp.ts` scores a round with, and
+ * it is the only thing that should use it. The mean a session quotes you is
+ * `mean` below, which does not work this way.
  */
 export function simpleMean(values: number[]): number {
   if (values.length === 0) return NaN;
@@ -39,9 +43,29 @@ export function simpleMean(values: number[]): number {
   return total / values.length;
 }
 
-/** Untrimmed mean of every solve. A single DNF makes the whole session mean a DNF. */
+/**
+ * Untrimmed mean of every solve that produced a time.
+ *
+ * DNFs are skipped rather than swallowing the figure. A session mean is how fast
+ * you are when you solve it, and one failed attempt out of a hundred should not
+ * be able to delete that number for the rest of the session — which is what
+ * `simpleMean` would do here. NaN when nothing finished at all, because then
+ * there really is no mean to quote.
+ *
+ * `stdev` and the histogram's own mean already work this way; this brings the
+ * figure beside them into line.
+ */
 export function mean(solves: Solve[]): number {
-  return simpleMean(solves.map(effectiveMs));
+  let total = 0;
+  let count = 0;
+
+  for (const solve of solves) {
+    const ms = effectiveMs(solve);
+    if (!Number.isFinite(ms)) continue;
+    total += ms;
+    count += 1;
+  }
+  return count === 0 ? NaN : total / count;
 }
 
 /**

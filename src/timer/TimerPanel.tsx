@@ -15,9 +15,9 @@ import StatsPanel from './StatsPanel'
 import CompBar from './CompBar'
 import AverageDetail from './AverageDetail'
 import type { AverageView } from './averageText'
-import type { Dispatch, SetStateAction } from 'react'
+import type { CSSProperties, Dispatch, SetStateAction } from 'react'
 import { DEFAULT_TIMER_SETTINGS, type TimerSettings } from './settings'
-import { average } from './stats'
+import { average, meanExec, meanMemo } from './stats'
 import { formatOf, resultOf, suggestTarget } from './comp'
 import { downloadText, sessionCsv, slug, stamp } from '../data/backup'
 import {
@@ -64,6 +64,12 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   const session = activeSession(store)
   const solves = session.solves
   const event = eventOf(session.event)
+
+  // A picture of the scramble is the one thing a blindfolded solve is not
+  // allowed to look at. `showCubeNet` is left alone, so this is off only for as
+  // long as the event is — switching back to 3x3 brings the preview straight
+  // back without anyone touching a setting.
+  const hidePreview = event.split && settings.hideBldPreview
 
   const options = { mbldCount: settings.mbldCount }
   const [scrambles, setScrambles] = useState<Scramble[]>(() => [scrambleFor(event, options)])
@@ -199,7 +205,7 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     goNext()
   }
 
-  const { phase, ms, memoMs, inspectMs } = useTimer(
+  const { phase, ms, inspectMs } = useTimer(
     (finished, memo, penalty) => {
       // Multi-blind is the one event the clock can't finish on its own: how many
       // cubes came out solved decides both the score and whether the attempt
@@ -282,11 +288,37 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     runningDisplay: settings.runningDisplay,
   })
 
+  const railShown = (settings.showSolveList || settings.showStats) && !settings.railStowed
+
   return (
-    <div className={solving ? 'timer-frame solving' : 'timer-frame'}>
+    <div
+      className={solving ? 'timer-frame solving' : 'timer-frame'}
+      // Multipliers rather than sizes: the stylesheet still decides how the
+      // clock and the scramble scale with the window, and these only say by how
+      // much more or less than stock.
+      style={{
+        '--clock-scale': settings.clockScale / 100,
+        '--scramble-scale': settings.scrambleScale / 100,
+      } as CSSProperties}
+    >
+      {/* Collapsed, the rail is gone rather than narrowed — a 22px column of
+          nothing is worse than either state. The handle below is what brings it
+          back, and it is deliberately the only thing left of it. */}
+      {!railShown && (settings.showSolveList || settings.showStats) && (
+        <button
+          type="button"
+          className="rail-open"
+          aria-expanded={false}
+          title="show the solve list"
+          onClick={() => onSettings({ ...settings, railStowed: false })}
+        >
+          ›
+        </button>
+      )}
+
       {/* The rail carries the tools now, so it stands as long as anything in
           it does rather than only as long as the solve list. */}
-      {(settings.showSolveList || settings.showStats) && (
+      {railShown && (
         <aside className={settings.flatSidebar ? 'timer-rail flat' : 'timer-rail'}>
           {settings.showStats && (
             <div className="rail-stats">
@@ -301,6 +333,15 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
           )}
 
           <div className="rail-head">
+            <button
+              type="button"
+              className="rail-stow"
+              aria-expanded
+              title="hide the solve list"
+              onClick={() => onSettings({ ...settings, railStowed: true })}
+            >
+              ‹
+            </button>
             <SessionPicker
               sessions={store.sessions}
               activeId={store.activeId}
@@ -316,6 +357,7 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
             <div className="rail-list">
               <SolveList
                 solves={solves}
+                sessionId={session.id}
                 decimals={settings.decimals}
                 onPenalty={setPenalty}
                 onDelete={deleteSolve}
@@ -337,9 +379,14 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
             <button type="button" className="rail-tool" onClick={startRound}>
               🏁 comp sim
             </button>
+            {/* Disabled rather than hidden for a blindfolded event: a button
+                that vanishes looks like a bug, and one that does nothing looks
+                like a worse one. */}
             <button
               type="button"
               className="rail-tool"
+              disabled={hidePreview}
+              title={hidePreview ? 'off for blindfolded events' : undefined}
               onClick={() => onSettings({ ...settings, showCubeNet: !settings.showCubeNet })}
             >
               🧊 preview
@@ -424,11 +471,19 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
               </p>
             )}
 
-            {/* memoMs is only ever non-null on a split solve, so no mode check. */}
-            {memoMs !== null && !timing && (
+            {/* The session's mean memo and mean exec, not the last solve's split
+                — which is the half of a blindfolded solve you are actually
+                training, and the one figure the averages below cannot show you.
+                The last solve's own split is still a click away in the list.
+
+                Gated on the event rather than on the last solve having a split,
+                so the line is there from the first solve of a session instead of
+                appearing once one lands. It updates on exactly the same path as
+                the ao5 below it: `solves` is derived every render. */}
+            {event.split && !timing && (
               <div className="split">
-                <span>memo <b>{formatTime(memoMs, settings.decimals)}</b></span>
-                <span>exec {formatTime(ms - memoMs, settings.decimals)}</span>
+                <span>memo <b>{formatTime(meanMemo(solves), settings.decimals)}</b></span>
+                <span>exec <b>{formatTime(meanExec(solves), settings.decimals)}</b></span>
               </div>
             )}
 
@@ -465,7 +520,7 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
 
         {/* Not pinned to a corner — it sits wherever it was last dragged, over
             the whole frame. */}
-        {settings.showCubeNet && (
+        {settings.showCubeNet && !hidePreview && (
           <ScramblePreview
             event={event}
             scramble={scramble}
