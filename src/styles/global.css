@@ -2767,6 +2767,12 @@ textarea,
   display: flex;
   gap: var(--cell-gap);
 }
+/* A month that starts on a Monday follows one that ended on a Sunday, so there
+   is no ragged edge between the two and the grids run together as one. This is
+   the space the ragged edge would have taken. */
+.activity-month-block.flush {
+  margin-left: var(--cell);
+}
 .activity-week {
   display: flex;
   flex-direction: column;
@@ -3252,80 +3258,6 @@ textarea,
 .solve-tag.cubes {
   color: var(--text-dim);
   font-weight: 800;
-}
-
-/* ----- rearranging the stats boxes ----- */
-/* The button that opens this sits in a card head beside a select, where the
-   24px the bench strips need to clear their figures is just a gap. */
-.card-controls .bench-edit {
-  margin-left: 0;
-}
-.tile-editor {
-  margin: 6px 0 16px;
-}
-.tile-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.tile-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--panel-2);
-}
-/* Dimmed rather than dropped: a hidden box you can't find is a box you can't
-   put back, and the list would reshuffle every time you switched one off. */
-.tile-item.off {
-  opacity: 0.5;
-}
-.tile-name {
-  flex: 1;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: calc(14px * var(--font-scale));
-  font-weight: 600;
-}
-.tile-name i {
-  color: var(--text-dim);
-  font-size: calc(12px * var(--font-scale));
-  font-style: normal;
-}
-.tile-item-tools {
-  display: flex;
-  gap: 4px;
-}
-.tile-item-tools button {
-  min-width: 30px;
-  padding: 4px 8px;
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
-  font-size: calc(13px * var(--font-scale));
-  font-weight: 700;
-}
-.tile-item-tools button:hover:not(:disabled) {
-  color: var(--text);
-  border-color: var(--accent);
-}
-.tile-item-tools button:disabled {
-  opacity: 0.35;
-}
-.tile-toggle[aria-pressed='true'] {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-}
-.setting-aside {
-  color: var(--text-dim);
-  font-size: calc(14px * var(--font-scale));
 }
 
 /* ----- deleting everything ----- */

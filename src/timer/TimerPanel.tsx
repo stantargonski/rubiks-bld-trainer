@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTimer } from './useTimer'
 import { clockPhase, clockText } from './display'
-import { digitsFace, formatTime, MAX_ENTRY_DIGITS, parseDigits } from './format'
+import { digitsFace, formatTime, maxEntryDigits, parseDigits } from './format'
 import { eventOf, type EventId, type WcaEvent } from './events'
 import { prepare, scrambleFor, scrambleText, type Scramble } from './scramble'
 import EventPicker from './EventPicker'
@@ -229,7 +229,7 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
    * enter twice, and a 0.00 solve in the history is worse than nothing happening.
    */
   function commitTyped() {
-    const typed = parseDigits(entry)
+    const typed = parseDigits(entry, settings.typedDecimals)
     if (!Number.isFinite(typed) || typed <= 0) return
 
     const solve = newSolve(typed, null, scrambleText(scramble), session.event, 'none')
@@ -248,7 +248,9 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     }
     if (/^\d$/.test(press.key)) {
       press.preventDefault()
-      setEntry((prev) => (prev.length >= MAX_ENTRY_DIGITS ? prev : prev + press.key))
+      setEntry((prev) => (
+        prev.length >= maxEntryDigits(settings.typedDecimals) ? prev : prev + press.key
+      ))
     }
   }
 
@@ -282,6 +284,10 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
     decimals: settings.decimals,
     runningDisplay: settings.runningDisplay,
   })
+
+  /** The typed field's own face, read twice below — once for its value and once
+      to size the box to it. */
+  const entryFace = digitsFace(entry, settings.typedDecimals)
 
   const railShown = (settings.showSolveList || settings.showStats) && !settings.railStowed
 
@@ -442,12 +448,12 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
                    a time into it. */
                 <input
                   className="clock clock-entry"
-                  value={digitsFace(entry)}
+                  value={entryFace}
                   /* Sized to what it holds. Without this the box is twenty
                      characters wide at clock size — an invisible band across the
                      window that swallows every click aimed at the rail or the
                      list behind it. Four is the floor, the width of '0.00'. */
-                  size={Math.max(digitsFace(entry).length, 4)}
+                  size={Math.max(entryFace.length, 4)}
                   readOnly
                   autoFocus
                   inputMode="numeric"
@@ -466,7 +472,8 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
 
             {typedEntry && (
               <p className="entry-hint">
-                type the digits — 1234 is 12.34 — then enter. esc clears.
+                type the digits — 12345 is{' '}
+                {settings.typedDecimals === 3 ? '12.345' : '1:23.45'} — then enter. esc clears.
               </p>
             )}
 

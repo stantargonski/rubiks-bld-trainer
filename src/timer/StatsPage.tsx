@@ -8,7 +8,6 @@ import { activeSession, type Solve, type TimerStore } from './types'
 import TimeChart from './charts/TimeChart'
 import Histogram from './charts/Histogram'
 import SummaryTiles from './charts/SummaryTiles'
-import StatTilesEditor from './charts/StatTilesEditor'
 import ActivityHeatmap from './charts/ActivityHeatmap'
 import AverageDetail from './AverageDetail'
 import type { AverageView } from './averageText'
@@ -88,6 +87,9 @@ function BenchCard({ title, bench, valueFor, decimals, onToggle }: {
   )
 }
 
+/** The activity calendar's default span: the last year of days. */
+const ACTIVITY_YEAR: TimeWindow = { kind: 'days', days: 365 }
+
 interface StatsPageProps {
   store: TimerStore
   settings: TimerSettings
@@ -99,15 +101,13 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
   // Opens on whatever you were just timing, which is nearly always what you
   // came here to look at.
   const [sessionId, setSessionId] = useState(() => activeSession(store).id)
-  const [range, setRange] = useState<TimeWindow>({ kind: 'days', days: 365 })
+  const [range, setRange] = useState<TimeWindow>(ACTIVITY_YEAR)
   /** `all`, an `e:<event>` or an `s:<session>` — one control over two kinds of thing. */
   const [filter, setFilter] = useState('all')
   /** How much of the session below is being looked at. */
   const [span, setSpan] = useState<TimeWindow>(RANGE_ALL)
   /** The average whose solves are open for reading, or null. */
   const [detail, setDetail] = useState<AverageView | null>(null)
-  /** Whether the boxes below are open for rearranging. */
-  const [editingTiles, setEditingTiles] = useState(false)
 
   /**
    * "Now", read once when the page opens rather than on every render.
@@ -259,12 +259,20 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
               </optgroup>
             </select>
 
-            <RangePicker
-              range={range}
-              solves={activitySolves}
-              now={now}
-              onChange={setRange}
-            />
+            {/* Two spans, not the full picker the graph below carries. A
+                calendar of squares only reads at one of two scales — the year
+                you can take in at a glance, or the whole history — and the
+                spans in between drew a strip too short to say anything the
+                numbers above it hadn't already. */}
+            <select
+              value={range.kind === 'all' ? 'all' : 'year'}
+              onChange={(change) => setRange(
+                change.target.value === 'all' ? RANGE_ALL : ACTIVITY_YEAR,
+              )}
+            >
+              <option value="year">year</option>
+              <option value="all">all time</option>
+            </select>
           </div>
         </div>
 
@@ -319,35 +327,13 @@ export default function StatsPage({ store, settings, onSettings }: StatsPageProp
                 <option key={item.id} value={item.id}>{item.name}</option>
               ))}
             </select>
-            {/* Same control the bench strips carry, for the same reason: the
-                thing being edited is right underneath it, so there is nowhere
-                better to put it than beside what it changes. */}
-            <button
-              type="button"
-              className="bench-edit"
-              aria-expanded={editingTiles}
-              onClick={() => setEditingTiles(!editingTiles)}
-            >
-              {editingTiles ? 'done' : 'edit boxes'}
-            </button>
           </div>
         </div>
-
-        {editingTiles && (
-          <StatTilesEditor
-            order={settings.statTiles}
-            hidden={settings.statTilesOff}
-            onChange={(statTiles, statTilesOff) =>
-              onSettings({ ...settings, statTiles, statTilesOff })}
-          />
-        )}
 
         <SummaryTiles
           solves={windowed}
           decimals={decimals}
           event={event}
-          order={settings.statTiles}
-          hidden={settings.statTilesOff}
           onOpenAverage={setDetail}
         />
 

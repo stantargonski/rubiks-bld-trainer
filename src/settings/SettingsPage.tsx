@@ -87,6 +87,13 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (next: boolean)
  * value worth knowing exactly, and none of them wants to be dragged past
  * fourteen wrong values on the way to the right one. Buttons step, and the field
  * takes a number straight if you already know which one you want.
+ *
+ * The field holds its own text while you are in it, and only clamps once you
+ * leave or press enter. Clamping per keystroke instead made the field
+ * impossible to type in: backspacing 100 to 10 snapped it straight back to the
+ * minimum, and the leading 1 of 150 shot it to the maximum before the 5 was
+ * typed — so the only reachable values were the ones the buttons already gave
+ * you.
  */
 function Stepper({ value, min, max, step, format, onChange }: {
   value: number
@@ -96,10 +103,24 @@ function Stepper({ value, min, max, step, format, onChange }: {
   format: (value: number) => string
   onChange: (value: number) => void
 }) {
+  /** What is being typed, or null when the field is just showing `value`. */
+  const [draft, setDraft] = useState<string | null>(null)
+
   const clamp = (next: number) => Math.min(max, Math.max(min, next))
   // Steps land on multiples of `step` even if the stored value isn't one.
-  const nudge = (direction: number) =>
+  const nudge = (direction: number) => {
+    setDraft(null)
     onChange(clamp(Math.round((value + direction * step) / step) * step))
+  }
+
+  /** Takes what was typed, or puts the field back if it wasn't a number. */
+  function commit() {
+    if (draft !== null) {
+      const parsed = Number.parseFloat(draft.replace(/[^\d.-]/g, ''))
+      if (Number.isFinite(parsed)) onChange(clamp(Math.round(parsed)))
+    }
+    setDraft(null)
+  }
 
   return (
     <div className="stepper">
@@ -107,10 +128,14 @@ function Stepper({ value, min, max, step, format, onChange }: {
       <input
         type="text"
         inputMode="numeric"
-        value={format(value)}
-        onChange={(change) => {
-          const parsed = Number.parseFloat(change.target.value.replace(/[^\d.-]/g, ''))
-          if (Number.isFinite(parsed)) onChange(clamp(parsed))
+        value={draft ?? format(value)}
+        onChange={(change) => setDraft(change.target.value)}
+        onBlur={commit}
+        onKeyDown={(press) => {
+          if (press.key === 'Enter') { press.preventDefault(); commit() }
+          // Abandons the edit rather than committing it, which is the one thing
+          // a half-typed number in a clamped field needs a way out to.
+          if (press.key === 'Escape') { press.preventDefault(); setDraft(null) }
         }}
       />
       <button type="button" onClick={() => nudge(1)} disabled={value >= max} aria-label="more">+</button>
@@ -255,7 +280,13 @@ export default function SettingsPage({
                     color: theme.colors.text,
                     borderColor: theme.colors.line,
                   }}
-                  onClick={() => setAppearance('themeId', theme.id)}
+                  /* Closes the palette editor as it goes: it edits the custom
+                     theme, and leaving it open under a stock theme left a panel
+                     of controls that changed nothing you could see. */
+                  onClick={() => {
+                    setAppearance('themeId', theme.id)
+                    setEditingTheme(false)
+                  }}
                 >
                   <span>{theme.name}</span>
                   <i style={{ background: theme.colors.accent }} />
@@ -463,7 +494,9 @@ export default function SettingsPage({
 
               <Row
                 label="how a time is entered"
-                description="Typed is for a stackmat: 1234 is is read as 12.34 and 12345 is 1:23.45."
+                description={timer.typedDecimals === 3
+                  ? 'Typed is for a stackmat: 12345 is read as 12.345 and 123456 is 1:23.456.'
+                  : 'Typed is for a stackmat: 1234 is read as 12.34 and 12345 is 1:23.45.'}
               >
                 <Choice
                   options={[
@@ -472,6 +505,24 @@ export default function SettingsPage({
                   ]}
                   value={timer.entryMode}
                   onChange={(id) => setTimer('entryMode', id)}
+                />
+              </Row>
+
+              {/* Separate from "decimal appearance" below, which is only how a
+                  time is drawn. This is what the digits you type mean, and a
+                  timer that quotes milliseconds read as hundredths is out by a
+                  factor of ten on every solve. */}
+              <Row
+                label="typed time precision"
+                description="How many digits at the end of what you type are the fraction."
+              >
+                <Choice
+                  options={[
+                    { id: '2', name: 'hundredths' },
+                    { id: '3', name: 'thousandths' },
+                  ]}
+                  value={timer.typedDecimals === 3 ? '3' : '2'}
+                  onChange={(id) => setTimer('typedDecimals', id === '3' ? 3 : 2)}
                 />
               </Row>
 

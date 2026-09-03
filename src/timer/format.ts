@@ -68,47 +68,59 @@ export function parseTime(text: string): number {
 }
 
 /**
- * The most digits a typed time is allowed to carry: hh mm ss cc.
+ * The most digits a typed time is allowed to carry: hh mm ss, then the fraction.
  *
  * Anything past this is a keypress that couldn't have been meant, and silently
  * dropping it beats letting a stray key turn 12.34 into two hours.
  */
-export const MAX_ENTRY_DIGITS = 8;
+export function maxEntryDigits(decimals: 2 | 3): number {
+  return 6 + decimals;
+}
 
 /**
  * A stream of digits as a time, the way stackmat users type one.
  *
- * The digits fill from the right: the last two are hundredths, the next two
- * seconds, then minutes, then hours. So "1234" is 12.34 and "12345" is 1:23.45,
- * and nobody has to reach for a colon or a full stop mid-solve.
+ * The digits fill from the right: the last two (or three, on a timer that
+ * reports milliseconds) are the fraction, the next two seconds, then minutes,
+ * then hours. So at two places "1234" is 12.34 and "12345" is 1:23.45, and
+ * nobody has to reach for a colon or a full stop mid-solve.
+ *
+ * Which of the two it is, is the user's to say: a stackmat quotes hundredths
+ * and most phone timers quote milliseconds, and reading one as the other is off
+ * by a factor of ten every time.
  *
  * NaN for an empty string, which formatTime already renders as an em dash.
  */
-export function parseDigits(digits: string): number {
-  const clean = digits.replace(/\D/g, '').slice(0, MAX_ENTRY_DIGITS);
+export function parseDigits(digits: string, decimals: 2 | 3 = 2): number {
+  const clean = digits.replace(/\D/g, '').slice(0, maxEntryDigits(decimals));
   if (clean === '') return NaN;
 
-  const value = Number(clean);
-  const hundredths = value % 100;
-  const seconds = Math.floor(value / 100) % 100;
-  const minutes = Math.floor(value / 10_000) % 100;
-  const hours = Math.floor(value / 1_000_000);
+  // What the fraction's digits are worth: 10ms a tick at two places, 1ms at
+  // three. The rest of the fields sit above it on the same scale.
+  const scale = 10 ** decimals;
+  const tick = 1000 / scale;
 
-  return ((hours * 60 + minutes) * 60 + seconds) * 1000 + hundredths * 10;
+  const value = Number(clean);
+  const fraction = value % scale;
+  const seconds = Math.floor(value / scale) % 100;
+  const minutes = Math.floor(value / (scale * 100)) % 100;
+  const hours = Math.floor(value / (scale * 10_000));
+
+  return ((hours * 60 + minutes) * 60 + seconds) * 1000 + fraction * tick;
 }
 
 /**
- * The same digits as a clock face to type against, padded so the hundredths are
- * always the last two. Shows "0.00" for nothing typed rather than an empty
- * space, so the field reads as a clock before it reads as a text box.
+ * The same digits as a clock face to type against, padded so the fraction is
+ * always the last two or three. Shows "0.00" for nothing typed rather than an
+ * empty space, so the field reads as a clock before it reads as a text box.
  */
-export function digitsFace(digits: string): string {
-  const clean = digits.replace(/\D/g, '').slice(0, MAX_ENTRY_DIGITS);
-  if (clean === '') return '0.00';
+export function digitsFace(digits: string, decimals: 2 | 3 = 2): string {
+  const clean = digits.replace(/\D/g, '').slice(0, maxEntryDigits(decimals));
+  if (clean === '') return `0.${'0'.repeat(decimals)}`;
 
-  const padded = clean.padStart(3, '0');
-  const hundredths = padded.slice(-2);
-  const rest = padded.slice(0, -2);            // seconds, then minutes, then hours
+  const padded = clean.padStart(decimals + 1, '0');
+  const fraction = padded.slice(-decimals);
+  const rest = padded.slice(0, -decimals);     // seconds, then minutes, then hours
 
   const parts: string[] = [];
   let head = rest;
@@ -119,5 +131,5 @@ export function digitsFace(digits: string): string {
   parts.unshift(head);
 
   // Only the leading group keeps its natural width; the rest are two-digit.
-  return `${parts.join(':')}.${hundredths}`;
+  return `${parts.join(':')}.${fraction}`;
 }
