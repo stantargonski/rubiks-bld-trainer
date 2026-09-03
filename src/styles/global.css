@@ -1198,7 +1198,7 @@ textarea,
   border-radius: var(--radius-sm);
   color: var(--text);
   font-size: calc(clamp(18px, 2.4vw, 32px) * var(--scramble-scale, 1));
-  font-weight: 600;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   line-height: 1.35;
 }
