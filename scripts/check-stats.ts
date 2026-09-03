@@ -12,6 +12,9 @@
  */
 import { FORMATS, resultOf } from '../src/timer/comp';
 import {
+  applyWindow, DAY, dateInput, inputDate, startOfDay, windowBounds,
+} from '../src/timer/charts/filters';
+import {
   average, best, bestAverage, bestAverageWindow, bestSingleIndex, mean, rollingAverages,
   stdev, trimCount, trimmedAverage,
 } from '../src/timer/stats';
@@ -163,10 +166,84 @@ eq(mean(solvesOf(['dnf', 'dnf'])), NaN, 'no mean at all when nothing finished');
 eq(best(solvesOf([])), NaN, 'no best without solves');
 eq(stdev(solvesOf([11_000, 11_000, 11_000])), 0, 'no deviation in a flat run');
 
+// ---- the window the charts are looking through ----
+
+/** Solves at a day apart, oldest first, the most recent one `now`. */
+function daily(count: number, now: number): Solve[] {
+  return Array.from({ length: count }, (unused, index) => ({
+    id: now - (count - 1 - index) * DAY,
+    ms: 12_000,
+    memoMs: null,
+    penalty: 'none' as Penalty,
+    scramble: '',
+    event: '333' as const,
+  }));
+}
+
+const NOW = new Date(2026, 2, 15, 12, 0, 0).getTime();
+const TEN = daily(10, NOW);
+
+eq(applyWindow(TEN, { kind: 'all' }, NOW).length, 10, 'all time keeps everything');
+eq(applyWindow([], { kind: 'all' }, NOW).length, 0, 'and an empty history stays empty');
+eq(applyWindow(TEN, { kind: 'days', days: 1 }, NOW).length, 1, 'a one-day window is today');
+eq(applyWindow(TEN, { kind: 'days', days: 7 }, NOW).length, 7, 'a week is seven of them');
+eq(applyWindow(TEN, { kind: 'days', days: 365 }, NOW).length, 10,
+  'a window wider than the history is the whole history');
+
+eq(applyWindow(TEN, { kind: 'lastN', n: 3 }, NOW).length, 3, 'last three is three');
+check(
+  applyWindow(TEN, { kind: 'lastN', n: 3 }, NOW)[2].id === TEN[9].id,
+  'last three counts back from the most recent, not forward from the first',
+);
+eq(applyWindow(TEN, { kind: 'lastN', n: 99 }, NOW).length, 10,
+  'asking for more solves than exist gives all of them');
+
+// Both ends included: a range of one day is that day, not nothing.
+const midday = (at: number) => TEN[at].id;
+eq(
+  applyWindow(TEN, { kind: 'dates', from: midday(9), to: midday(9) }, NOW).length, 1,
+  'a single-day range holds that day',
+);
+eq(
+  applyWindow(TEN, { kind: 'dates', from: midday(2), to: midday(5) }, NOW).length, 4,
+  'a date range includes the day at each end',
+);
+eq(
+  applyWindow(TEN, { kind: 'dates', from: NOW + 30 * DAY, to: NOW + 40 * DAY }, NOW).length, 0,
+  'a range in the future holds nothing',
+);
+
+// A DNF is never dropped by a window: the trimmed averages rely on one sorting
+// last, so a window that quietly removed them would rewrite every ao5 drawn.
+const withDnf = solvesOf([10_000, 'dnf', 12_000, 13_000, 14_000]);
+eq(applyWindow(withDnf, { kind: 'lastN', n: 5 }, NOW).length, 5,
+  'a window keeps DNFs rather than filtering them out');
+
+// `from` of null means "as far back as there is anything" — the charts decide
+// what to draw for that, and must be able to tell it from a real date.
+check(windowBounds({ kind: 'all' }, TEN, NOW).from === null, 'all time has no lower bound');
+check(
+  windowBounds({ kind: 'lastN', n: 99 }, TEN, NOW).from === null,
+  'nor does a lastN wider than the history',
+);
+check(
+  windowBounds({ kind: 'lastN', n: 3 }, TEN, NOW).from === startOfDay(TEN[7].id).getTime(),
+  'a lastN that fits starts on the day of its oldest solve',
+);
+check(
+  windowBounds({ kind: 'days', days: 1 }, TEN, NOW).from === startOfDay(NOW).getTime(),
+  'a one-day window starts this morning, not 24 hours ago',
+);
+
+// The date fields round-trip in local time. Parsed as UTC, picking today would
+// land on yesterday for anyone west of Greenwich.
+check(inputDate(dateInput(NOW)) === startOfDay(NOW).getTime(), 'a date survives the round trip');
+check(inputDate('not a date') === null, 'and a value that is not a date is rejected');
+
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} failure(s):`);
   for (const message of failures) console.error(`  ${message}`);
   process.exit(1);
 }
 
-console.log('✓ averages hold, ao5 and ao12 unchanged by the ao100 trim');
+console.log('✓ averages hold, ao5 and ao12 unchanged by the ao100 trim; windows cut where they say');
