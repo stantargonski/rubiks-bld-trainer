@@ -31,4 +31,18 @@ the settings menu.
 npm install
 npm run dev
 ```
+## Acknowledgements
 
+- **[csTimer](https://cstimer.net/)** — the import in this app reads csTimer's own
+  export file. tstimer contains no csTimer code and is not derived from it; the
+  parser was written against the format. csTimer is a separate project under
+  the GPLv3.
+- **[WCA Regulations](https://www.worldcubeassociation.org/regulations/)** — the
+  source for inspection, the +2 and DNF cutoffs, and what counts as a scramble
+  for each event.
+- **Speffz** — the corner/edge lettering scheme used by the 3BLD trainer,
+  devised by Stefan Pochmann.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
