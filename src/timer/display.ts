@@ -22,9 +22,18 @@ export interface ClockInput {
   runningDisplay: RunningDisplay;
 }
 
-/** Inspection is still on screen through the hold that ends it. */
+/**
+ * Inspection is still on screen through the hold that ends it, and through the
+ * armed pause after that hold — right up until the solve itself begins.
+ *
+ * 'ready' used to be missing, so arming the timer during inspection dropped the
+ * previous solve's time back on the clock a moment before the next one started.
+ * The `inspectMs > 0` test is what keeps a plain hold, with no inspection behind
+ * it, from reading as a countdown: the hook zeroes it when a solve starts.
+ */
 export function isInspecting(phase: Phase, inspectMs: number): boolean {
-  return phase === 'inspecting' || (phase === 'holding' && inspectMs > 0);
+  if (phase === 'inspecting') return true;
+  return (phase === 'holding' || phase === 'ready') && inspectMs > 0;
 }
 
 /** What inspection has cost you so far. */

@@ -1720,22 +1720,26 @@ textarea,
   font-size: calc(13px * var(--font-scale));
   color: var(--text-dim);
 }
-/* Wide enough for a hex field and its swatch, and no wider — the point of the
-   grid is that eighteen colours read as three short lists rather than a form. */
+/* A row is a swatch and its name now, rather than a swatch above a text box —
+   half the height each, which is the whole reason eighteen colours can read as
+   three short lists rather than as a form. The picker is inside the swatch. */
 .swatch-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px 14px;
 }
 .swatch-field {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
 }
 .swatch-name {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  min-width: 0;
   font-size: calc(13px * var(--font-scale));
   font-weight: 700;
 }
@@ -1745,38 +1749,91 @@ textarea,
   font-style: normal;
   font-weight: 500;
 }
-.swatch-controls {
-  display: flex;
-  gap: 6px;
-}
-/* The browser draws its own box and padding inside a colour input; stripped
-   back so the control is the colour rather than a chip of it. */
-.swatch-controls input[type='color'] {
+/* The swatch is the control: the colour itself, at a size worth aiming at,
+   with the picker hanging under it. No native colour input anywhere here — that
+   one opens the operating system's own dialog, which knows nothing about the
+   theme it is being used to build and has nowhere to type an rgb value. */
+.swatch-wrap {
+  position: relative;
   flex: none;
-  width: 42px;
-  height: 32px;
+  display: inline-flex;
+}
+.swatch-open {
+  width: 38px;
+  height: 28px;
   padding: 0;
-  background: none;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
-.swatch-controls input[type='color']::-webkit-color-swatch-wrapper {
-  padding: 2px;
+.swatch-open:hover {
+  border-color: var(--text-dim);
 }
-.swatch-controls input[type='color']::-webkit-color-swatch {
-  border: 0;
-  border-radius: 7px;
+.swatch-open:focus-visible,
+.color-area:focus-visible,
+.color-hue:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-.swatch-controls input[type='color']::-moz-color-swatch {
-  border: 0;
-  border-radius: 7px;
+/* Panel-coloured on the editor's inset background, so it reads as something in
+   front of the grid rather than as more of it. */
+.color-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 208px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
 }
-.swatch-controls input[type='text'] {
-  flex: 1;
+/* Saturation across and brightness up, over the hue the element carries inline.
+   touch-action is what stops a drag on a phone scrolling the settings page out
+   from under the finger doing the dragging. */
+.color-area {
+  position: relative;
+  height: 116px;
+  border-radius: var(--radius-sm);
+  background-image:
+    linear-gradient(to top, #000, rgb(0 0 0 / 0)),
+    linear-gradient(to right, #fff, rgb(255 255 255 / 0));
+  cursor: crosshair;
+  touch-action: none;
+}
+.color-hue {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%
+  );
+  cursor: ew-resize;
+  touch-action: none;
+}
+/* White with a dark ring, so it stays visible against every colour it can sit
+   on, and inert so it never swallows the drag it is reporting. */
+.color-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5);
+  transform: translate(-50%, 50%);
+  pointer-events: none;
+}
+.color-hue .color-dot {
+  bottom: 50%;
+}
+.color-text {
   min-width: 0;
   padding: 6px 9px;
-  background: var(--panel);
+  background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -1785,7 +1842,7 @@ textarea,
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.swatch-controls input:focus-visible {
+.color-text:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -2244,12 +2301,27 @@ textarea,
 }
 
 /* ----- solving: everything but the clock recedes ----- */
+/* The bar is not inside .timer-frame — it is not even inside the <main> that
+   holds it — so this one hangs off the app's own root, which the app sets from
+   what the timer reports. Stowed, the bar is a floating wordmark instead, and
+   that has exactly the same claim on the screen during a solve. */
+.app.solving .topbar,
+.app.solving .topbar-float {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .timer-frame.solving .timer-rail,
 .timer-frame.solving .comp-bar,
 .timer-frame.solving .scramble-bar,
 .timer-frame.solving .scramble-preview,
 .timer-frame.solving .rail-open,
-.timer-frame.solving .timer-hint {
+.timer-frame.solving .timer-hint,
+/* These two hang off the clock rather than sitting beside it, and are gated in
+   the markup on the clock running. That gate does not cover inspection, which
+   recedes the same way — so they are listed here with everything else. */
+.timer-frame.solving .clock-delta,
+.timer-frame.solving .split {
   opacity: 0;
   pointer-events: none;
 }
@@ -3185,10 +3257,14 @@ textarea,
 /* ----- typing a time instead of running the clock ----- */
 /* Styled as the clock rather than as a text box: it stands exactly where the
    clock stood, so the screen does not rearrange itself when the mode changes. */
+/* Drawn as a box, because an empty one has nothing else to say it is one: the
+   digits only appear as they are typed now, and a blank patch of window in the
+   middle of the screen is not an invitation to type into it. */
 .clock-entry {
-  padding: 0;
-  background: none;
-  border: 0;
+  padding: 0 0.12em;
+  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   text-align: center;
   caret-color: var(--accent);
   /* Sized by its `size` attribute, which the panel keeps in step with the
@@ -3204,6 +3280,7 @@ textarea,
 }
 .clock-entry:focus {
   outline: none;
+  border-color: var(--accent);
 }
 .entry-hint {
   margin: 10px 0 0;

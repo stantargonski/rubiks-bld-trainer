@@ -6,6 +6,9 @@ import type { Penalty } from './types'
  *                          ├─→ memo → running → idle              (blindfolded)
  *                          └─→ inspecting → holding → ready → …   (inspection on)
  *
+ * Escape is the way back out of that last row: from inspection, or from the
+ * hold that arms it, it returns to idle without recording anything.
+ *
  * The BLD split is a phase rather than a `hasSplit` boolean beside `running`:
  * a boolean would make four combinations, two of which are nonsense, and every
  * branch would have to rule them out. Inspection is a phase for the same reason
@@ -69,8 +72,6 @@ export function useTimer(
         }
 
         function onKeyDown(event: KeyboardEvent) {
-            if (event.repeat) return
-
             // Never hijack keys aimed at something you can type into.
             const active = document.activeElement
             if (
@@ -81,6 +82,28 @@ export function useTimer(
 
             // Ctrl/Cmd combos stay the browser's — reload, devtools, tab switching.
             if (event.ctrlKey || event.metaKey) return
+
+            // Auto-repeat is nothing to act on, but a repeated space is still a
+            // space: left to the browser it scrolls whatever is under the mouse,
+            // so a long hold walks the solve list down its own rail. This sits
+            // below the guards above rather than at the top of the handler, so a
+            // space held down in a text field is still the field's own.
+            if (event.repeat) {
+                if (event.code === 'Space') event.preventDefault()
+                return
+            }
+
+            // Inspection you have thought better of. Nothing is recorded and
+            // nothing asks for the next scramble, so the one you were inspecting
+            // is still the one in the banner — which is the whole point of an
+            // escape hatch rather than a DNF.
+            if (event.key === 'Escape' && (phase === 'inspecting' || inspectAt.current > 0)) {
+                event.preventDefault()
+                inspectAt.current = 0
+                setInspectMs(0)
+                setPhase('idle')
+                return
+            }
 
             if (phase === 'memo') {
                 if (MODIFIERS.includes(event.key)) return
@@ -137,6 +160,10 @@ export function useTimer(
             if (phase === 'ready') {
                 penalty.current = inspectionPenalty()
                 inspectAt.current = 0
+                // Both halves of "not inspecting" cleared together: the display
+                // reads the elapsed time, so a leftover one would show a hold
+                // counting down fifteen seconds that nobody started.
+                setInspectMs(0)
                 startedAt.current = performance.now()
                 memoAt.current = 0
                 setMemoMs(null)
@@ -178,10 +205,14 @@ export function useTimer(
         return () => cancelAnimationFrame(id)
     }, [phase])
 
-    // Inspection runs on its own clock, and keeps running through the hold —
-    // holding space to get ready is part of your fifteen seconds, not a pause.
+    // Inspection runs on its own clock, and keeps running through the hold and
+    // the armed pause after it — getting ready is part of your fifteen seconds,
+    // not a break in them. Stopping at 'ready' froze the countdown and dropped
+    // the previous solve's time back on screen at the moment you were about to
+    // start.
     useEffect(() => {
-        if (phase !== 'inspecting' && !(phase === 'holding' && inspectAt.current > 0)) return
+        const armed = phase === 'holding' || phase === 'ready'
+        if (phase !== 'inspecting' && !(armed && inspectAt.current > 0)) return
 
         let id = 0
         function tick() {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTimer } from './useTimer'
-import { clockPhase, clockText } from './display'
+import { clockPhase, clockText, isInspecting } from './display'
 import { digitsFace, formatTime, maxEntryDigits, parseDigits } from './format'
 import { eventOf, type EventId, type WcaEvent } from './events'
 import { prepare, scrambleFor, scrambleText, type Scramble } from './scramble'
@@ -37,9 +37,16 @@ interface TimerPanelProps {
   setStore: Dispatch<SetStateAction<TimerStore>>
   settings: TimerSettings
   onSettings: (next: TimerSettings) => void
+  /** Told whenever a solve is under way and the interface is meant to recede.
+      The top bar is not inside this component, or even inside the element this
+      component styles, so no stylesheet here can reach it — the app has to be
+      the one to put it away. */
+  onSolving?: (solving: boolean) => void
 }
 
-export default function TimerPanel({ store, setStore, settings, onSettings }: TimerPanelProps) {
+export default function TimerPanel({
+  store, setStore, settings, onSettings, onSolving,
+}: TimerPanelProps) {
 
   // A comp round is a slice of the session's own solves rather than a mode of
   // its own: nothing about timing changes, so nothing about a solve needs to
@@ -220,7 +227,20 @@ export default function TimerPanel({ store, setStore, settings, onSettings }: Ti
   )
 
   const timing = phase === 'running' || phase === 'memo'
-  const solving = timing && settings.hideUiWhileRunning
+  // Inspection counts as solving for this purpose, and it is the same fifteen
+  // seconds either way: you are looking at the cube, and the scramble you are
+  // no longer allowed to consult is the last thing that should still be up.
+  // Which means the interface goes at the start of inspection and comes back
+  // when the solve ends, rather than blinking away between the two.
+  const solving = (timing || isInspecting(phase, inspectMs)) && settings.hideUiWhileRunning
+
+  // Reported rather than read, so the class this drives can go on the app's own
+  // root. The cleanup matters as much as the call: leaving the timer mid-solve
+  // must not leave the bar hidden with nothing left on screen to bring it back.
+  useEffect(() => {
+    onSolving?.(solving)
+    return () => onSolving?.(false)
+  }, [solving, onSolving])
 
   /**
    * Commits what has been typed, if it amounts to a time.

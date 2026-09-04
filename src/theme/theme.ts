@@ -314,8 +314,13 @@ export function isDark(hex: string): boolean {
   return (0.2126 * red + 0.7152 * green + 0.0722 * blue) < 140;
 }
 
-/** `#rgb` or `#rrggbb` to channels, or null if it is neither. */
-function parseHex(value: string): [number, number, number] | null {
+/**
+ * `#rgb` or `#rrggbb` to channels, or null if it is neither.
+ *
+ * Exported for ./color.ts, which builds the palette editor's picker on top of
+ * it. One reader of a hex code, so there is one answer to what counts as one.
+ */
+export function parseHex(value: string): [number, number, number] | null {
   const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(value);
   if (short) {
     const [, red, green, blue] = short;

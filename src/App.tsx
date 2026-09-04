@@ -61,6 +61,10 @@ function Brand({ appearance, onAppearance }: {
 
 export default function App() {
   const [section, setSection] = useState<Section>('timer');
+  /** Whether a solve is running and the interface is meant to be out of the
+      way. Lives up here because the top bar does — the timer can hide its own
+      rail and scramble, but the bar is above it in the tree. */
+  const [solving, setSolving] = useState(false);
 
   const [store, setStore] = useState(loadStore);
   const [settings, setSettings] = useState(loadSettings);
@@ -174,7 +178,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={solving ? 'app solving' : 'app'}>
       <div className="app-bg" />
 
       {/* Stowed, the bar is gone rather than shortened — the point of stowing it
@@ -237,6 +241,7 @@ export default function App() {
             setStore={setTimerStore}
             settings={timerSettings}
             onSettings={updateTimerSettings}
+            onSolving={setSolving}
           />
         )}
         {section === 'stats' && (

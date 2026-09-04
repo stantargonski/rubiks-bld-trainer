@@ -111,12 +111,16 @@ export function parseDigits(digits: string, decimals: 2 | 3 = 2): number {
 
 /**
  * The same digits as a clock face to type against, padded so the fraction is
- * always the last two or three. Shows "0.00" for nothing typed rather than an
- * empty space, so the field reads as a clock before it reads as a text box.
+ * always the last two or three.
+ *
+ * Empty for nothing typed. It used to read "0.00", which looked like a clock
+ * showing a time rather than a box waiting for one, and left you deleting a
+ * time that was never there. The box it sits in is drawn as a box now, so an
+ * empty one still says where to type.
  */
 export function digitsFace(digits: string, decimals: 2 | 3 = 2): string {
   const clean = digits.replace(/\D/g, '').slice(0, maxEntryDigits(decimals));
-  if (clean === '') return `0.${'0'.repeat(decimals)}`;
+  if (clean === '') return '';
 
   const padded = clean.padStart(decimals + 1, '0');
   const fraction = padded.slice(-decimals);

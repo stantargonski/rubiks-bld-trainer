@@ -63,15 +63,22 @@ reads({ phase: 'inspecting', inspectMs: 16_500 }, '+2', 'still +2 before sevente
 reads({ phase: 'inspecting', inspectMs: INSPECT_DNF_MS }, 'DNF', 'seventeen seconds is a DNF');
 reads({ phase: 'inspecting', inspectMs: 30_000 }, 'DNF', 'and stays a DNF');
 
-// The countdown carries through the hold that ends inspection — holding space
-// to get ready is part of your fifteen seconds, not a pause.
+// The countdown carries through the hold that ends inspection, and through the
+// armed pause after it — getting ready is part of your fifteen seconds, not a
+// pause in them. 'ready' is the case that used to drop back to the last solve's
+// time a moment before the next one started.
 reads({ phase: 'holding', inspectMs: 3000, ms: PREVIOUS }, '12', 'the hold keeps counting down');
-// But a hold with no inspection behind it shows the last solve, not a countdown.
+reads({ phase: 'ready', inspectMs: 3000, ms: PREVIOUS }, '12', 'an armed timer keeps counting down');
+reads({ phase: 'ready', inspectMs: INSPECT_MS }, '+2', 'and still names the penalty it earned');
+// But a hold or an arm with no inspection behind it shows the last solve.
 reads({ phase: 'holding', inspectMs: 0, ms: PREVIOUS }, formatTime(PREVIOUS, 2), 'no inspection, no countdown');
+reads({ phase: 'ready', inspectMs: 0, ms: PREVIOUS }, formatTime(PREVIOUS, 2), 'nor when armed without it');
 
 check(isInspecting('inspecting', 0), 'inspecting is inspecting even at zero elapsed');
 check(isInspecting('holding', 1), 'a hold during inspection still counts as inspecting');
+check(isInspecting('ready', 1), 'and so does the arm that follows it');
 check(!isInspecting('holding', 0), 'a plain hold is not inspection');
+check(!isInspecting('ready', 0), 'nor is a plain arm');
 check(!isInspecting('running', 5000), 'a running solve is not inspection');
 
 // ---- penalties ----
