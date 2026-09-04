@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import ColorField from './ColorPicker'
+import { parseColor } from '../theme/color'
 import {
   CUSTOM_THEME_ID, isDark, seedCustomTheme, THEMES,
   type Appearance, type CustomTheme, type Palette,
@@ -13,9 +15,10 @@ import {
  * here too, which makes a colourblind palette a thing you can sit down and make
  * rather than a feature someone has to add.
  *
- * Two controls per colour, deliberately. The swatch is for choosing one and the
- * field is for pasting one: a palette usually arrives from somewhere else as six
- * hex codes, and picking those out of a colour wheel by eye is not choosing them.
+ * A colour is a swatch and nothing else until you press it. Eighteen colours
+ * each carrying a swatch and a text box was a form you had to read; eighteen
+ * swatches is the palette itself, and the picker with its typing field is one
+ * click away in ./ColorPicker.
  */
 
 interface Field {
@@ -63,54 +66,14 @@ const GROUPS: { title: string; note: string; fields: Field[] }[] = [
   },
 ]
 
-const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
-
-/**
- * The hex box beside a swatch.
- *
- * Its text is local rather than read straight off the palette, because a
- * controlled field would erase every half-typed colour: `#e0` is not a colour,
- * so nothing would be stored, so the field would snap back to what it was
- * before the second character landed.
- *
- * It still has to follow the palette when the palette moves underneath it —
- * pressing "start from Paper" changes eighteen colours at once, and a box left
- * showing the old one is a box lying about what it controls.
- */
-function HexField({ value, label, onChange }: {
-  value: string
-  label: string
-  onChange: (next: string) => void
-}) {
-  const [text, setText] = useState(value)
-  // Adjusted during the render that brings the new colour in, rather than in an
-  // effect afterwards: an effect would paint the stale value first and correct
-  // it a frame later, which on eighteen fields at once is a visible flicker.
-  const [shown, setShown] = useState(value)
-  if (value !== shown) {
-    setShown(value)
-    setText(value)
-  }
-
-  return (
-    <input
-      type="text"
-      spellCheck={false}
-      aria-label={`${label} as hex`}
-      value={text}
-      onChange={(change) => {
-        const next = change.target.value.trim()
-        setText(next)
-        if (HEX.test(next)) onChange(next)
-      }}
-    />
-  )
-}
-
 export default function ThemeEditor({ appearance, onAppearance }: {
   appearance: Appearance
   onAppearance: (next: Appearance) => void
 }) {
+  /** Which colour's picker is open, if any. One at a time: two pickers over one
+      grid is two answers to what you are editing. */
+  const [openKey, setOpenKey] = useState<keyof Palette | null>(null)
+
   // Seeded from whatever is currently on screen rather than from stock: opening
   // this to warm up one colour of Nord should not throw the other seventeen away.
   const theme = appearance.customTheme
@@ -126,11 +89,15 @@ export default function ThemeEditor({ appearance, onAppearance }: {
   }
 
   function setColor(key: keyof Palette, value: string) {
-    if (!HEX.test(value)) return
+    // Normalised on the way in, so an rgb value typed into the picker is stored
+    // as the hex the rest of the app can read.
+    const color = parseColor(value)
+    if (!color) return
+
     // The light/dark flag follows the background until you say otherwise, so the
     // scrollbars and the native selects turn over with the palette rather than
     // needing a second thought.
-    set(key === 'bg' ? { bg: value, dark: isDark(value) } : { [key]: value })
+    set(key === 'bg' ? { bg: color, dark: isDark(color) } : { [key]: color })
   }
 
   return (
@@ -142,24 +109,19 @@ export default function ThemeEditor({ appearance, onAppearance }: {
 
           <div className="swatch-grid">
             {group.fields.map((field) => (
-              <label key={field.key} className="swatch-field">
+              <div key={field.key} className="swatch-field">
+                <ColorField
+                  value={theme[field.key]}
+                  label={field.name}
+                  open={openKey === field.key}
+                  onOpen={(open) => setOpenKey(open ? field.key : null)}
+                  onChange={(next) => setColor(field.key, next)}
+                />
                 <span className="swatch-name">
                   {field.name}
                   {field.hint && <i>{field.hint}</i>}
                 </span>
-                <span className="swatch-controls">
-                  <input
-                    type="color"
-                    value={expand(theme[field.key])}
-                    onChange={(change) => setColor(field.key, change.target.value)}
-                  />
-                  <HexField
-                    value={theme[field.key]}
-                    label={field.name}
-                    onChange={(next) => setColor(field.key, next)}
-                  />
-                </span>
-              </label>
+              </div>
             ))}
           </div>
         </section>
@@ -203,13 +165,4 @@ export default function ThemeEditor({ appearance, onAppearance }: {
       </div>
     </div>
   )
-}
-
-/** `<input type="color">` only understands the six-digit form. */
-function expand(value: string): string {
-  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(value)
-  if (!short) return value
-
-  const [, red, green, blue] = short
-  return `#${red}${red}${green}${green}${blue}${blue}`
 }

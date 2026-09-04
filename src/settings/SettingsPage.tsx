@@ -484,7 +484,7 @@ export default function SettingsPage({
               </Row>
               <Row
                 label="hide everything while solving"
-                description="Will only show timer update while solving."
+                description="Leaves the clock alone on screen, from the start of inspection to the end of the solve."
               >
                 <Toggle
                   value={timer.hideUiWhileRunning}
